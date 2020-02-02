@@ -72,20 +72,15 @@ class HandwritingModel:
     def cnn_model(self):
         x_train, y_train = self.dataset.train_images, \
                            self.dataset.train_labels
-        # 归一化
         x_train = x_train.reshape(-1, IMAGE_SIZE, IMAGE_SIZE, 1)
-        # one-hot
-        # https://stackoverflow.com/questions/51890883/memory-issues-when-transforming-np-array-using-to-categorical
-        #y_train = utils.to_categorical(y=y_train,
-        #                               num_classes=len(self.dataset.class_names))
+
+        # Various resources I used in coming to these parameters:
+        # https://github.com/jtyoui/Jtyoui/blob/master/jtyoui/neuralNetwork/kerase/HandWritingRecognition.py (MIT)
+        # https://pdfs.semanticscholar.org/4941/aed85462968e9918110b4ba740c56030fd23.pdf
+        # "Hands-On Machine Learning with Scikit-Learn and TensorFlow" by Aurelien Geron
+        # It might pay to use BatchNormalization and early stopping, too.
 
         model = self.model = keras.Sequential([
-            # input_shape:输入平面，就在第一个位置设置
-            # filters：卷积核、滤波器
-            # kernel_size：卷积核大小
-            # strides：步长
-            # padding有两种方式：same/valid
-            # activation：激活函数
             keras.layers.Convolution2D(input_shape=(IMAGE_SIZE, IMAGE_SIZE, 1),
                                        filters=64,  # Number of outputs
                                        kernel_size=3,
