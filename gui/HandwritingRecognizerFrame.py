@@ -4,19 +4,6 @@ import os
 from cnn_chinese_hw.gui.HandwritingRecognizerCanvas import HandwritingRecogniserCanvas
 os.chdir('../recognizer')
 
-BUFFERED = 0
-DRAW_OUTLINE = True
-#OUTLINE_CHAR = u'和'
-#OUTLINE_CHAR = u'人'
-#OUTLINE_CHAR = u'米'
-OUTLINE_CHAR = '目'
-OUTLINE_CHAR = '権'
-OUTLINE_CHAR = '本'
-OUTLINE_CHAR = '切'
-OUTLINE_CHAR = '植'
-OUTLINE_CHAR = '植'
-OUTLINE_CHAR = '農'
-
 
 class RecogiserFrame(wx.Frame):
     def __init__(self, parent):

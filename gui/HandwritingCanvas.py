@@ -1,7 +1,6 @@
 import wx
 from abc import ABC, abstractmethod
 from cnn_chinese_hw.stroke_tools.get_vertex import get_vertex
-from tensorflow import keras
 from cnn_chinese_hw.stroke_tools.points_to_plot import points_to_plot
 
 
