@@ -3,7 +3,7 @@
 A convolutional neural network using Keras for recognising Chinese 
 (Simplified/Traditional) and Japanese Kanji. Because it uses Tomoe data,
 I have put it under the same license (LGPL 2.1). Unlike CASIA and some other 
-publically available Chinese handwriting datasets, this data can be used for 
+publicly available Chinese handwriting datasets, this data can be used for 
 commercial purposes. 
 
 It is still under heavy development and not ready for general use (pre-alpha). 
