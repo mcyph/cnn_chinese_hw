@@ -19,8 +19,11 @@ def iter_tomoe_data(path):
                     yield ord(cur_char), LStrokes
                     LStrokes = []
 
-                char = line.split('<utf8>&#x')[1].split(';')[0]
-                char = int(char, 16)
+                if '<utf8>&#x' in line:
+                    char = line.split('<utf8>&#x')[1].split(';')[0]
+                    char = int(char, 16)
+                else:
+                    char = ord(line.split('<utf8>')[1].split('<')[0])
                 cur_char = chr(char)
 
             elif line.startswith('<stroke>'):
