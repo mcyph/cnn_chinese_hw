@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-from input.data_paths import data_path
-
+from cnn_chinese_hw.get_package_dir import get_package_dir
 from cnn_chinese_hw.parse_data import iter_tomoe_data
 from cnn_chinese_hw.stroke_tools.StrokeMetrics import StrokeMetrics
 
@@ -11,13 +10,13 @@ class StrokeData:
     def __init__(self):
         self.D = {
             'ja': self.get_stroke_data(
-                data_path('hw_data', 'handwriting-ja.xml')
+                f'{get_package_dir()}/data/handwriting-ja.xml'
             ),
             'cn': self.get_stroke_data(
-                data_path('hw_data', 'handwriting-zh_CN.xml')
+                f'{get_package_dir()}/data/handwriting-zh_CN.xml'
             ),
             'cn_Hant': self.get_stroke_data(
-                data_path('hw_data', 'handwriting-zh_TW.xml')
+                f'{get_package_dir()}/data/handwriting-zh_TW.xml'
             )
         }
 

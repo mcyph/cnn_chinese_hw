@@ -1,7 +1,9 @@
 import os
 import json
+from cnn_chinese_hw.get_package_dir import get_package_dir
 
 LOrds = []
+PATH = f'{get_package_dir()}/data/supplemental_data.json'
 
 
 class HandwritingRegister:
@@ -16,8 +18,9 @@ class HandwritingRegister:
 
     def get_D_strokes(self):
         DStrokes = {}
-        if os.path.exists('hw_reg.json'):
-            with open('hw_reg.json', 'r', encoding='utf-8') as f:
+
+        if os.path.exists(PATH):
+            with open(PATH, 'r', encoding='utf-8') as f:
                 for line in f:
                     if not line.strip():
                         continue
@@ -26,7 +29,7 @@ class HandwritingRegister:
         return DStrokes
 
     def add_char(self, ord_, LLines):
-        with open('hw_reg.json', 'a+', encoding='utf-8') as f:
+        with open(PATH, 'a+', encoding='utf-8') as f:
             f.write(json.dumps([ord_, LLines])+'\n')
         self.DStrokes.setdefault(ord_, []).append(LLines)
 
