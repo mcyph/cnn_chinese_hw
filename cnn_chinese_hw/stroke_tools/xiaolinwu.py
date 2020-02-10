@@ -2,6 +2,7 @@
 This file uses functions from the following file for antialised lines using
 the "Xiaolin Wu" algorithm:
 https://github.com/rcarmo/pngcanvas/blob/master/pngcanvas.py
+Modified by Dave Morrissey to only use a single channel.
 
 File under the MIT License (MIT)
 

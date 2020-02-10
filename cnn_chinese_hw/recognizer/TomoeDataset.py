@@ -6,6 +6,7 @@ from cnn_chinese_hw.stroke_tools.HWDataAugmenter import HWStrokesAugmenter
 from cnn_chinese_hw.gui.HandwritingRegister import HandwritingRegister
 from cnn_chinese_hw.stroke_tools.get_vertex import get_vertex
 from cnn_chinese_hw.stroke_tools.points_normalized import points_normalized
+from cnn_chinese_hw.get_package_dir import get_package_dir
 
 
 def shuffle_in_unison_inplace(a, b):
@@ -38,9 +39,9 @@ class TomoeDataset:
         self.load_images = load_images
 
         if small_sample_only:
-            self.dataset_path = 'strokedata_sample.npz'
+            self.dataset_path = f'{get_package_dir()}/data/strokedata_sample.npz'
         else:
-            self.dataset_path = 'strokedata.npz'
+            self.dataset_path = f'{get_package_dir()}/data/strokedata.npz'
 
         if cache and os.path.exists(self.dataset_path):
             self.__load_from_file(self.dataset_path)

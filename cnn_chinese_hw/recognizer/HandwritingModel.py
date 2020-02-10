@@ -4,6 +4,7 @@ from tensorflow import keras
 import numpy as np
 import matplotlib.pyplot as plt
 from cnn_chinese_hw.recognizer.TomoeDataset import TomoeDataset
+from cnn_chinese_hw.get_package_dir import get_package_dir
 
 # use less memory than float32
 # OPEN ISSUE: Would it be better to support float16 here?
@@ -33,9 +34,9 @@ class HandwritingModel:
         # Cache the Kanji data if possible,
         # as can take quite a long time itself
         if SMALL_SAMPLE_ONLY:
-            self.model_path = 'hw_model_sample.hdf5'
+            self.model_path = f'{get_package_dir()}/data/hw_model_sample.hdf5'
         else:
-            self.model_path = 'hw_model.hdf5'
+            self.model_path = f'{get_package_dir()}/data/hw_model.hdf5'
 
         self.dataset = TomoeDataset(
             image_size=IMAGE_SIZE,
