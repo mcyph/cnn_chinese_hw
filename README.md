@@ -3,8 +3,9 @@
 # Introduction
 
 A convolutional neural network using Keras for recognising Chinese 
-(Simplified/Traditional) and Japanese Kanji. An advantage over many 
-other open-source engines is that strokes can be drawn out-of-order. 
+(Simplified/Traditional) and Japanese Kanji licensed under the LGPL 2.1. 
+An advantage over many other open-source engines is that strokes can 
+be drawn out-of-order. 
 
 It is intended to be used as an input method, and accepts x,y coordinate 
 points of strokes as input parameters. This differs from some other
@@ -15,19 +16,6 @@ paper with a brush or pen.
 
 It is still under heavy development and not ready for general use (alpha)
 although it is showing promising results.
-
-# License
-
-Because it uses [Tomoe](https://sourceforge.net/projects/tomoe/) data, 
-I have put this project and my supplemental data under the same license 
-(LGPL 2.1). Compared to the license of some other publicly 
-available Chinese handwriting datasets, the LGPL is quite permissive 
-and allows for commercial use as well as for use in research.
-
-[KanjiVG](https://kanjivg.tagaini.net/) data is also included for 
-validation purposes. This data is not combined when recognizing due 
-it being under the Creative Commons Attribution-ShareAlike 3.0 
-license. 
 
 # Comments on Implementation
 
@@ -48,3 +36,33 @@ results. I have added a few hundred characters which I have drawn myself,
 many of them with incorrect numbers of strokes/more or less curves so as to 
 increase the likelihood of the CNN being able to recognize different 
 people's handwriting, including non-native speakers. 
+
+# License
+
+Because it uses [Tomoe](https://sourceforge.net/projects/tomoe/) data, 
+I have put this project and my supplemental data under the same license 
+(LGPL 2.1). Compared to the license of some other publicly 
+available Chinese handwriting datasets, the LGPL is quite permissive 
+and allows for commercial use as well as for use in research.
+
+[KanjiVG](https://kanjivg.tagaini.net/) data is also included for 
+validation purposes. This data is not combined when recognizing due 
+it being under the Creative Commons Attribution-ShareAlike 3.0 
+license. 
+
+
+    Copyright (C) 2020  Dave Morrissey
+    
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License 2.1 as published by the Free Software Foundation.
+    
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+    
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
+    USA
