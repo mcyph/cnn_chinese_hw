@@ -42,7 +42,7 @@ setup(
     packages=find_packages(),
     install_requires=[
         #'tensorflow',
-        ''
+        'svg.path',
     ],
     zip_safe=False
 )

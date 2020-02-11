@@ -1,4 +1,6 @@
 import os
+import json
+from hashlib import md5
 import numpy as np
 
 from cnn_chinese_hw.parse_data.StrokeData import StrokeData
@@ -39,9 +41,11 @@ class TomoeDataset:
         self.load_images = load_images
 
         if small_sample_only:
-            self.dataset_path = f'{get_package_dir()}/data/strokedata_sample.npz'
+            self.dataset_path = f'{get_package_dir()}/data/' \
+                                f'strokedata_sample.npz'
         else:
-            self.dataset_path = f'{get_package_dir()}/data/strokedata.npz'
+            self.dataset_path = f'{get_package_dir()}/data/' \
+                                f'strokedata.npz'
 
         if cache and os.path.exists(self.dataset_path):
             self.__load_from_file(self.dataset_path)
@@ -51,9 +55,14 @@ class TomoeDataset:
 
     def __load_from_file(self, path):
         with open(path, 'rb') as f:
+            print("Saving Tomoe Dataset to file:", path)
             files = np.load(f)
 
-            self.train_images = files['train_images'] if self.load_images else None
+            self.train_images = (
+                files['train_images']
+                if self.load_images
+                else None
+            )
             self.train_labels = files['train_labels']
             self.test_images = files['test_images']
             self.test_labels = files['test_labels']
@@ -61,6 +70,7 @@ class TomoeDataset:
 
     def __save_to_file(self, path):
         with open(path, 'wb') as f:
+            print("Saving Tomoe Dataset to file:", path)
             np.savez(
                 f,
                 train_images=self.train_images,
@@ -88,12 +98,17 @@ class TomoeDataset:
             num_images += 1
 
         # not-float64 bottom-out warning!
-        data = np.zeros((num_images, self.image_size, self.image_size),
+        data = np.zeros((num_images,
+                         self.image_size,
+                         self.image_size),
                         dtype=np.float32)
         labels = np.zeros(num_images, dtype=np.uint32)
 
         xx = 0
-        for ord_, LRastered in DRasteredByOrd.items():
+        for ord_ in list(DRasteredByOrd.keys()):
+            LRastered = DRasteredByOrd[ord_]
+            del DRasteredByOrd[ord_]  # save memory
+
             for rastered in LRastered:
                 data[xx, :, :] = rastered
                 labels[xx] = DOrdToClass[ord_]
@@ -126,7 +141,10 @@ class TomoeDataset:
                 for __ in range(self.augmentations_per_sample):
                     # Render on top lots of times, to give an idea
                     # of where the lines will end up on average.
-                    rastered = aug.raster_strokes(on_val=255, image_size=self.image_size)
+                    rastered = aug.raster_strokes(
+                        on_val=255,
+                        image_size=self.image_size
+                    )
                     yield ord_, rastered
 
         # Add from Tomoe data
@@ -134,6 +152,8 @@ class TomoeDataset:
         SAlwaysAdd = set(
             ord(i) for i in '目木日書的一是不了人我在有他这为之大来以个中上们'
         )
+        SAdded = set()
+
         for xx, (ord_, LStrokes) in enumerate(sd.iter()):
             if ord_ in SAlwaysAdd:
                 pass
@@ -141,11 +161,24 @@ class TomoeDataset:
                 continue
             print("Processing Tomoe data:", ord_, chr(ord_))
 
+            # Remove duplicate data from Chinese Simplified+Traditional/Japanese
+            m = md5()
+            m.update(chr(ord_).encode('utf-8'))
+            m.update(json.dumps(LStrokes).encode('ascii'))
+            digest = m.digest()
+            if digest in SAdded:
+                print("Ignoring dupe data:", ord_, chr(ord))
+                continue
+            SAdded.add(digest)
+
             for i_LStrokes in LStrokes:
                 strokes = [i.LPoints for i in i_LStrokes]
                 aug = HWStrokesAugmenter(strokes)
                 for __ in range(self.augmentations_per_sample):
-                    rastered = aug.raster_strokes(on_val=255, image_size=self.image_size)
+                    rastered = aug.raster_strokes(
+                        on_val=255,
+                        image_size=self.image_size
+                    )
                     yield ord_, rastered
 
 
