@@ -4,11 +4,11 @@ import json
 import _thread
 import numpy as np
 try:
-    import tensorflow
-    Interpreter = tensorflow.lite.Interpreter
-except ImportError:
     import tflite_runtime.interpreter
     Interpreter = tflite_runtime.interpreter.Interpreter
+except ImportError:
+    import tensorflow
+    Interpreter = tensorflow.lite.Interpreter
 
 # HACK: This should be moved from HandwritingModel
 # to remove dependency on (non-lite) tensorflow!
