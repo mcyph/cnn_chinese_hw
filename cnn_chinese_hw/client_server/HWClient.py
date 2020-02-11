@@ -1,8 +1,8 @@
-from speedyrpc.client_server.shared_memory.SHMClient import SHMClient
-from speedyrpc.client_server.base_classes.ClientMethodsBase import ClientMethodsBase
+from speedysvc.client_server.shared_memory.SHMClient import SHMClient
+from speedysvc.client_server.base_classes.ClientMethodsBase import ClientMethodsBase
 
 from cnn_chinese_hw.client_server.HWServer import HWServer as srv
-from cnn_chinese_hw.toolkit.patterns.Singleton import Singleton
+from cnn_chinese_hw.client_server.Singleton import Singleton
 
 
 class HWClient(ClientMethodsBase,

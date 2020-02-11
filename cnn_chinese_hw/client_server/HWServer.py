@@ -1,8 +1,8 @@
 from cnn_chinese_hw.recognizer.TFLiteRecognizer import TFLiteRecognizer
-from cnn_chinese_hw.toolkit.list_operations.rem_dupes import rem_dupes
+from cnn_chinese_hw.client_server.rem_dupes import rem_dupes
 
-from speedyrpc.rpc_decorators import json_method
-from speedyrpc.client_server.base_classes.ServerMethodsBase import ServerMethodsBase
+from speedysvc.rpc_decorators import json_method
+from speedysvc.client_server.base_classes.ServerMethodsBase import ServerMethodsBase
 
 
 USE_ZINNIA = False
@@ -24,7 +24,7 @@ class HWServer(ServerMethodsBase):
 
         LRtn = [
             chr(ord_) for _, ord_ in
-            self.recognizer.get_L_candidates(LStrokes)[::-1]
+            self.recognizer.get_L_candidates(LStrokes)
         ]
 
         LRtn = rem_dupes(LRtn)
