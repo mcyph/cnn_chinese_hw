@@ -12,10 +12,43 @@ points of strokes as input parameters. This differs from some other
 engines which are trained to recognise Kanji/Hanzi drawn on physical 
 paper with a brush or pen.
 
-# Status
+# Install
 
-It is still under heavy development and not ready for general use (alpha)
-although it is showing promising results.
+``cnn_chinese_hw`` requires git lfs to download the trained tensorflow 
+lite model file when using ``git`` directly: 
+https://github.com/git-lfs/git-lfs/wiki/Installation.
+Alternatively, you could download this file from the GitHub web interface at 
+https://github.com/mcyph/cnn_chinese_hw/blob/master/cnn_chinese_hw/data/hw_quant_model.tflite.
+
+Then, type:
+
+    pip3 install git+https://github.com/mcyph/cnn_chinese_hw/cnn_chinese_hw.git
+
+If you just want to get predictions, you don't need a full `tensorflow` install -
+you can use the instructions at https://www.tensorflow.org/lite/guide/python
+to install just the tensorflow lite runtime.
+
+In order to train the model however, you will need `tensorflow` at least version 2.0+.
+pip3 may need to be updated to do this.
+
+    pip3 install --upgrade pip
+    pip3 install tensorflow
+
+# Recognize characters
+
+    from cnn_chinese_hw.recognizer.TFLiteRecognizer import TFLiteRecognizer
+    rec = TFLiteRecognizer()
+    print rec.get_L_candidates(
+        [[(208, 0), (199, 119), (94, 341)],
+         [(0, 461), (781, 520), (915, 520), (999, 479)],
+         [(189, 167), (213, 209), (238, 826), (268, 934), (203, 910)],
+         [(303, 514), (94, 766)],
+         [(462, 17), (497, 586), (522, 688), (646, 886), (796, 1000)],
+         [(716, 628), (462, 916)],
+         [(696, 101), (771, 155), (835, 251)]]
+    )
+
+This should recognize `我`.
 
 # Comments on Implementation
 
