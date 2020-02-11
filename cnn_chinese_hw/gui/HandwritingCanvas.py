@@ -75,10 +75,15 @@ class HandwritingCanvas(wx.ScrolledWindow):
         #dc.EndDrawing()
 
     def draw_saved_lines(self, dc):
-        dc.SetPen(wx.Pen('MEDIUM FOREST GREEN', 4))
+        dc.SetPen(wx.Pen('MAGENTA', 4))
         for line in self.lines:
-            for coords in line:
-                dc.DrawLine(*coords+coords)
+            for x, coords in enumerate(line):
+                if x:
+                    prev_coords = line[x-1]
+                else:
+                    prev_coords = coords
+
+                dc.DrawLine(*prev_coords+coords)
 
         dc.SetPen(wx.Pen('BLACK', 3))
         #print self.LConvLines

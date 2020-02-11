@@ -167,7 +167,7 @@ class TomoeDataset:
             m.update(json.dumps(LStrokes).encode('ascii'))
             digest = m.digest()
             if digest in SAdded:
-                print("Ignoring dupe data:", ord_, chr(ord))
+                print("Ignoring dupe data:", ord_, chr(ord_))
                 continue
             SAdded.add(digest)
 
