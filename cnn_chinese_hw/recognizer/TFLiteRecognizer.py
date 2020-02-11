@@ -16,6 +16,7 @@ IMAGE_SIZE = 28
 
 from cnn_chinese_hw.get_package_dir import get_package_dir
 from cnn_chinese_hw.stroke_tools.HWDataAugmenter import HWStrokesAugmenter
+from cnn_chinese_hw.stroke_tools.get_vertex import get_vertex
 
 
 class TFLiteRecognizer:
@@ -51,6 +52,7 @@ class TFLiteRecognizer:
         """
 
         # Get the rastered character (normal)
+        LStrokes = [get_vertex(LStroke) for LStroke in LStrokes]
         aug = HWStrokesAugmenter(LStrokes)
         rastered = aug.raster_strokes(
             on_val=255, image_size=IMAGE_SIZE, do_augment=False

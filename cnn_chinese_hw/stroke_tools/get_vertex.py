@@ -58,9 +58,10 @@ def get_distance(nodes, first_node_idx, last_node_idx):
 TOMOE_WRITING_WIDTH = 1000
 
 
-def _get_vertex(nodes, first_node_idx, last_node_idx):
+def _get_vertex(nodes, first_node_idx, last_node_idx, error_scale=1.0):
     rv = []
     ERROR = TOMOE_WRITING_WIDTH * TOMOE_WRITING_WIDTH // 4444  # 5%
+    ERROR *= error_scale
 
     dist, most_node_idx = get_distance(nodes, first_node_idx, last_node_idx)
     if dist > ERROR:
@@ -71,9 +72,30 @@ def _get_vertex(nodes, first_node_idx, last_node_idx):
     return rv
 
 
-def get_vertex(nodes):
+def get_vertex(nodes, error_scale=1.0):
+    """
+    Get only the most important points in `nodes`
+    For instance, there might be a fair amount of movement/noise
+    when someone draws a character, but there might only be 3
+    most important points in a right-angle stroke, for instance.
+    Normalising like this dramatically increases the likelihood
+    of recognition.
+
+    :param nodes: a list of strokes [[(x, y), ...], ...]
+    :param error_scale: higher numbers decrease the threshold at
+                        which a direction change is considered
+                        "important". Tomoe data was drawn with
+                        this value at TOMOE_WRITING_WIDTH *
+                        TOMOE_WRITING_WIDTH // 4444, and so
+                        it might be best to use these values.
+    :return: a list of strokes, only including the most important
+             points
+    """
     L = [nodes[0]]
-    LExtend = _get_vertex(nodes, 0, len(nodes)-1)
+    LExtend = _get_vertex(
+        nodes, 0, len(nodes)-1,
+        error_scale=error_scale
+    )
     if LExtend[0] != L[0]:
         L.extend(LExtend)
     return L
