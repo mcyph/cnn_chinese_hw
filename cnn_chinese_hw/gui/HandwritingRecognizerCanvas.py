@@ -1,6 +1,7 @@
 from cnn_chinese_hw.recognizer import HandwritingModel
 from cnn_chinese_hw.gui.HandwritingCanvas import HandwritingCanvas
 from cnn_chinese_hw.stroke_tools.HWDataAugmenter import HWStrokesAugmenter
+from cnn_chinese_hw.recognizer.TFLiteRecognizer import TFLiteRecognizer
 
 
 class HandwritingRecogniserCanvas(HandwritingCanvas):
@@ -11,6 +12,8 @@ class HandwritingRecogniserCanvas(HandwritingCanvas):
         HandwritingModel.LCHECK_ORD = 0
         self.hw_model = HandwritingModel.HandwritingModel(load_images=False)
         self.hw_model.run()
+
+        self.tflite_recognizer = TFLiteRecognizer()
 
         HandwritingCanvas.__init__(self, parent, id, size)
 
@@ -28,8 +31,11 @@ class HandwritingRecogniserCanvas(HandwritingCanvas):
             for ___ in range(3)
         ]
 
-        # Show the predictions
+        # Show the predictions using the
+        # tensorflow lite quantized model
         self.hw_model.do_prediction(rastered,
                                     should_be_ord=0,
                                     LAugRastered=LAugRastered)
 
+        for score, ord_ in self.tflite_recognizer.get_L_candidates(LVertices, n_cands=10):
+            print(f"tflite prediction: {score} {chr(ord_)}")

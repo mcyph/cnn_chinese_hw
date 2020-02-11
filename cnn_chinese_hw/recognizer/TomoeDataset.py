@@ -55,7 +55,7 @@ class TomoeDataset:
 
     def __load_from_file(self, path):
         with open(path, 'rb') as f:
-            print("Saving Tomoe Dataset to file:", path)
+            print("Loading Tomoe Dataset from file:", path)
             files = np.load(f)
 
             self.train_images = (
