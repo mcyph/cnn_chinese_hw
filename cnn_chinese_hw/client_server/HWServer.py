@@ -1,5 +1,3 @@
-from json import loads, dumps
-
 from cnn_chinese_hw.recognizer.TFLiteRecognizer import TFLiteRecognizer
 from cnn_chinese_hw.toolkit.list_operations.rem_dupes import rem_dupes
 
