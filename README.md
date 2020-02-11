@@ -7,9 +7,15 @@ publicly available Chinese handwriting datasets, this data can be used for
 commercial purposes. An advantage over many other open-source engines is 
 that strokes can be drawn out-of-order. 
 
-It is still under heavy development and not ready for general use (pre-alpha). 
+It is still under heavy development and not ready for general use (alpha)
+although it is showing promising results.
 
-It augments the Tomoe data: distorting from the center, randomising the points, 
+It is intended to be used as an input method, and accepts x,y coordinate 
+points of strokes as input parameters. This differs from some other
+engines which are trained to recognise Kanji/Hanzi drawn on physical 
+paper with a brush or pen.
+
+It augments the Tomoe data: distorting from the center, randomizing the points, 
 rotating the characters and strokes to a degree to increase the likelihood of 
 recognition. 
 
@@ -24,6 +30,6 @@ Because the data was drawn by only a few people, it may have trouble
 recognising some people's handwriting, although I think it provides pretty good
 results. I have added a few hundred characters which I have drawn myself, 
 many of them with incorrect numbers of strokes/more or less curves so as to 
-increase the likelihood of the CNN being able to recognise different 
+increase the likelihood of the CNN being able to recognize different 
 people's handwriting, including non-native speakers. 
 
