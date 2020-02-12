@@ -54,7 +54,6 @@ class TFLiteRecognizer:
         # Get the rastered character (normal)
         aug = HWStrokesAugmenter(LStrokes, find_vertices=True)
         rastered = aug.raster_strokes(
-            on_val=255,
             image_size=IMAGE_SIZE,
             do_augment=False
         ) / 255.0

@@ -28,17 +28,17 @@ class TomoeDataset:
     def __init__(self,
                  image_size,
                  augmentations_per_sample,
+                 real_strokes_per_sample_times,
                  small_sample_only,
                  small_sample_size,
-                 num_test,
                  load_images=True,
                  cache=True):
 
         self.image_size = image_size
         self.augmentations_per_sample = augmentations_per_sample
+        self.real_strokes_per_sample_times = real_strokes_per_sample_times
         self.small_sample_only = small_sample_only
         self.small_sample_size = small_sample_size
-        self.num_test = num_test
         self.load_images = load_images
 
         self.DOrdToClass = {}
@@ -156,7 +156,6 @@ class TomoeDataset:
             print("Processing KanjiVG data:", ord_, chr(ord_))
             aug = HWStrokesAugmenter(LStrokes, find_vertices=True)
             rastered = aug.raster_strokes(
-                on_val=255,
                 image_size=self.image_size,
                 do_augment=False
             )
@@ -178,8 +177,14 @@ class TomoeDataset:
                     # Render on top lots of times, to give an idea
                     # of where the lines will end up on average.
                     rastered = aug.raster_strokes(
-                        on_val=255,
                         image_size=self.image_size
+                    )
+                    yield ord_, rastered
+
+                for __ in range(self.real_strokes_per_sample_times):
+                    rastered = aug.raster_strokes(
+                        image_size=self.image_size,
+                        do_augment=False
                     )
                     yield ord_, rastered
 
@@ -212,8 +217,14 @@ class TomoeDataset:
                 aug = HWStrokesAugmenter(strokes)
                 for __ in range(self.augmentations_per_sample):
                     rastered = aug.raster_strokes(
-                        on_val=255,
                         image_size=self.image_size
+                    )
+                    yield ord_, rastered
+
+                for __ in range(self.real_strokes_per_sample_times):
+                    rastered = aug.raster_strokes(
+                        image_size=self.image_size,
+                        do_augment=False
                     )
                     yield ord_, rastered
 

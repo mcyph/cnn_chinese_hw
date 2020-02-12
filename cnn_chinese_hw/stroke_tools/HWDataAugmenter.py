@@ -44,9 +44,7 @@ class HWStrokesAugmenter:
 
         return out_strokes
 
-    def raster_strokes(self,
-                       on_val=1, image_size=24,
-                       do_augment=True):
+    def raster_strokes(self, image_size=24, do_augment=True):
         """
 
         :param raster_size:
@@ -81,7 +79,7 @@ class HWStrokesAugmenter:
         :return:
         """
         if myarray is None:
-            myarray = self.raster_strokes(on_val=255, image_size=image_size)
+            myarray = self.raster_strokes(image_size=image_size)
         im = Image.fromarray(np.uint8(cm.gist_earth(myarray) * 255))
         return im
 
@@ -281,7 +279,7 @@ if __name__ == '__main__':
             # Render on top lots of times, to give an idea
             # of where the lines will end up on average.
             LRastered = [
-                aug.raster_strokes(on_val=255)
+                aug.raster_strokes()
                 for x in range(256)
             ]
             images = [aug.raster_strokes_as_pil(rastered)

@@ -11,16 +11,23 @@ from cnn_chinese_hw.get_package_dir import get_package_dir
 keras.backend.set_floatx('float32')
 
 
-NUM_EPOCHS = 10
-BATCH_SIZE = 256
+NUM_EPOCHS = 1000
+# 32 -> 2.52 validation loss
+# 128 -> 2.04
+# 256 -> 2.01
+# 1024 -> 2.016
+# 1024 is faster on my card+not much difference
+BATCH_SIZE = 1024
 
 IMAGE_SIZE = 28
-# For validation of model
-NUM_TEST = 0
+# How many times to augment each set of strokes
+# (i.e. rotate/scale/distort... etc)
 # 150 needs 8.69 GiB - want to be sure
-# my 4GB card won't run out of memory
-AUGMENTATIONS_PER_SAMPLE = 50
-OVERLAY_RANDOM = False
+# I don't run out of RAM
+AUGMENTATIONS_PER_SAMPLE = 40
+# How often to add the actual
+# (unmodified) strokes
+REAL_STROKES_PER_SAMPLE_TIMES = 10
 CACHE_DATASET = False
 CACHE_MODEL = False
 
@@ -43,9 +50,9 @@ class HandwritingModel:
         self.dataset = TomoeDataset(
             image_size=IMAGE_SIZE,
             augmentations_per_sample=AUGMENTATIONS_PER_SAMPLE,
+            real_strokes_per_sample_times=REAL_STROKES_PER_SAMPLE_TIMES,
             small_sample_only=SMALL_SAMPLE_ONLY,
             small_sample_size=SMALL_SAMPLE_SIZE,
-            num_test=NUM_TEST,
             load_images=load_images,
             cache=CACHE_DATASET
         )
@@ -72,12 +79,16 @@ class HandwritingModel:
                            self.dataset.train_labels
         x_train = x_train.reshape(-1, IMAGE_SIZE, IMAGE_SIZE, 1)
 
+        x_val, y_val = self.dataset.test_images, \
+                       self.dataset.test_labels
+        x_val = x_val.reshape(-1, IMAGE_SIZE, IMAGE_SIZE, 1)
+        print("NUM TRAIN VALUES:", x_val.shape)
+
         # Various resources I used in coming to these parameters:
         # https://github.com/jtyoui/Jtyoui/blob/master/jtyoui/neuralNetwork/kerase/HandWritingRecognition.py (MIT)
         # https://pdfs.semanticscholar.org/4941/aed85462968e9918110b4ba740c56030fd23.pdf
         # "Hands-On Machine Learning with Scikit-Learn and TensorFlow" by Aurelien Geron
         # https://www.kdnuggets.com/2018/09/dropout-convolutional-networks.html
-        # It might pay to use early stopping, too.
 
         model = self.model = keras.Sequential([
             keras.layers.Convolution2D(input_shape=(IMAGE_SIZE, IMAGE_SIZE, 1),
@@ -152,15 +163,15 @@ class HandwritingModel:
 
             keras.layers.Dense(units=4096,
                                activation='relu'),
-            keras.layers.Dropout(0.5),
+            keras.layers.BatchNormalization(),
 
             keras.layers.Dense(units=2048,
                                activation='relu'),
-            keras.layers.Dropout(0.5),
+            keras.layers.BatchNormalization(),
 
             keras.layers.Dense(units=2048,
                                activation='relu'),
-            keras.layers.Dropout(0.5),
+            keras.layers.BatchNormalization(),
 
             keras.layers.Dense(units=2048,
                                activation='relu'),
@@ -188,15 +199,13 @@ class HandwritingModel:
 
         es = keras.callbacks.EarlyStopping(
             monitor='val_loss',
-            mode='min',
             verbose=1,
-            patience=3,
-            min_delta=1
+            patience=8,
+            #min_delta=1
         )
         mc = keras.callbacks.ModelCheckpoint(
             self.model_path,
             monitor='val_loss',
-            mode='min',
             verbose=1,
             save_best_only=True
         )
@@ -205,10 +214,7 @@ class HandwritingModel:
             y=y_train,
             batch_size=BATCH_SIZE,
             epochs=NUM_EPOCHS,
-            validation_data=(
-                self.dataset.test_images,
-                self.dataset.test_labels
-            ),
+            validation_data=(x_val, y_val),
             callbacks=[MyCustomCallback(), es, mc]
         )
         return model
@@ -283,14 +289,13 @@ if __name__ == '__main__':
     LCHECK_ORD = ord('我')
 
     aug = HWStrokesAugmenter(LCHECK)
-    LCHECK_RASTERED = aug.raster_strokes(on_val=255,
-                                         image_size=IMAGE_SIZE,
+    LCHECK_RASTERED = aug.raster_strokes(image_size=IMAGE_SIZE,
                                          do_augment=False) / 255.0
     plt.matshow(LCHECK_RASTERED)
     plt.show()
 
     LCHECK_RASTERED_AUG = [
-        aug.raster_strokes(on_val=255, image_size=IMAGE_SIZE) / 255.0
+        aug.raster_strokes(image_size=IMAGE_SIZE) / 255.0
         for ___ in range(20)
     ]
 

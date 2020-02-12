@@ -20,14 +20,12 @@ class HandwritingRecogniserCanvas(HandwritingCanvas):
     def process_lines(self, LVertices):
         # Get the rastered character (normal)
         aug = HWStrokesAugmenter(LVertices)
-        rastered = aug.raster_strokes(on_val=255,
-                                      image_size=HandwritingModel.IMAGE_SIZE,
+        rastered = aug.raster_strokes(image_size=HandwritingModel.IMAGE_SIZE,
                                       do_augment=False) / 255.0
 
         # Get the rastered character (randomly rotated, etc)
         LAugRastered = [
-            aug.raster_strokes(on_val=255,
-                               image_size=HandwritingModel.IMAGE_SIZE) / 255.0
+            aug.raster_strokes(image_size=HandwritingModel.IMAGE_SIZE) / 255.0
             for ___ in range(3)
         ]
 
