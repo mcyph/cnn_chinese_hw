@@ -7,16 +7,19 @@ from matplotlib import cm
 from random import randint
 from cnn_chinese_hw.stroke_tools.points_normalized import points_normalized
 from cnn_chinese_hw.stroke_tools.points_to_plot import points_to_plot, draw_in_place
+from cnn_chinese_hw.stroke_tools.get_vertex import get_vertex
 
 
 class HWStrokesAugmenter:
-    def __init__(self, strokes):
+    def __init__(self, strokes, find_vertices=False, vertice_error_scale=1.0):
         """
 
         """
         strokes = points_normalized(
             strokes, width=1000, height=1000
         )
+        if find_vertices:
+            strokes = [get_vertex(stroke, vertice_error_scale) for stroke in strokes]
         self.strokes = strokes
 
     def augment_strokes(self):
@@ -41,7 +44,9 @@ class HWStrokesAugmenter:
 
         return out_strokes
 
-    def raster_strokes(self, on_val=1, image_size=24, do_augment=True):
+    def raster_strokes(self,
+                       on_val=1, image_size=24,
+                       do_augment=True):
         """
 
         :param raster_size:
@@ -52,17 +57,13 @@ class HWStrokesAugmenter:
         else:
             strokes = self.strokes[:]
 
+        # Make the points in `strokes` not exceed the rastered image size
+        strokes = points_normalized(strokes, image_size - 1, image_size - 1)
 
+        # Draw using the xiaolin wu antialised line algorithm,
+        # outputting to a single-dimensional numpy array
         a = np.zeros(shape=(image_size, image_size), dtype=np.uint8)
-
-        if True:
-            strokes = points_normalized(strokes, image_size - 1, image_size - 1)
-            draw_in_place(a, strokes)
-        else:
-            strokes = points_normalized(strokes, image_size - 1, image_size - 1)
-            for L in points_to_plot(strokes):
-                for x, y in L:
-                    a[y, x] += on_val
+        draw_in_place(a, strokes)
         return a
 
     def raster_strokes_multiple_times(self, on_val=10, image_size=24):
@@ -70,16 +71,8 @@ class HWStrokesAugmenter:
 
         for x in range(255//on_val):
             strokes = self.augment_strokes()
-
-
-            if True:
-                strokes = points_normalized(strokes, image_size - 1, image_size - 1)
-                draw_in_place(a, strokes)
-            else:
-                strokes = points_normalized(strokes, image_size - 1, image_size - 1)
-                for L in points_to_plot(strokes):
-                    for x, y in L:
-                        a[y, x] += on_val
+            strokes = points_normalized(strokes, image_size - 1, image_size - 1)
+            draw_in_place(a, strokes)
         return a
 
     def raster_strokes_as_pil(self, myarray=None, image_size=48):

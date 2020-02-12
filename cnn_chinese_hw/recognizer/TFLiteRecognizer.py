@@ -52,10 +52,11 @@ class TFLiteRecognizer:
         """
 
         # Get the rastered character (normal)
-        LStrokes = [get_vertex(LStroke) for LStroke in LStrokes]
-        aug = HWStrokesAugmenter(LStrokes)
+        aug = HWStrokesAugmenter(LStrokes, find_vertices=True)
         rastered = aug.raster_strokes(
-            on_val=255, image_size=IMAGE_SIZE, do_augment=False
+            on_val=255,
+            image_size=IMAGE_SIZE,
+            do_augment=False
         ) / 255.0
         rastered = rastered.reshape(-1, IMAGE_SIZE, IMAGE_SIZE, 1)
         rastered = rastered.astype('float32')
