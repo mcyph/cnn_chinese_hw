@@ -3,6 +3,7 @@ import json
 from hashlib import md5
 import numpy as np
 
+from cnn_chinese_hw.parse_data.iter_kanjivg_data import iter_kanjivg_data
 from cnn_chinese_hw.parse_data.StrokeData import StrokeData
 from cnn_chinese_hw.stroke_tools.HWDataAugmenter import HWStrokesAugmenter
 from cnn_chinese_hw.gui.HandwritingRegister import HandwritingRegister
@@ -40,6 +41,9 @@ class TomoeDataset:
         self.num_test = num_test
         self.load_images = load_images
 
+        self.DOrdToClass = {}
+        self.LClassOrds = []
+
         if small_sample_only:
             self.dataset_path = f'{get_package_dir()}/data/' \
                                 f'strokedata_sample.npz'
@@ -52,6 +56,10 @@ class TomoeDataset:
         else:
             self.__init_data()
             self.__save_to_file(self.dataset_path)
+
+    #=========================================================#
+    #                  Read/Write from Cache                  #
+    #=========================================================#
 
     def __load_from_file(self, path):
         with open(path, 'rb') as f:
@@ -81,17 +89,34 @@ class TomoeDataset:
             )
 
     def __init_data(self):
-        LClassOrds = []
+        train_images, train_labels = self.__get_data(self.__iter_tomoe_data_labels)
+        train_images, train_labels = shuffle_in_unison_inplace(train_images, train_labels)
+        train_images = train_images / 255.0
+        self.train_images = train_images
+        self.train_labels = train_labels
+
+        test_images, test_labels = self.__get_data(self.__iter_kanjivg_data_labels)
+        test_images, test_labels = shuffle_in_unison_inplace(test_images, test_labels)
+        test_images = test_images / 255.0
+        self.test_images = test_images
+        self.test_labels = test_labels
+
+        self.class_names = np.asarray(
+            self.LClassOrds, dtype='int32'
+        )
+
+    def __get_data(self, fn):
         DRasteredByOrd = {}
-        DOrdToClass = {}
         cur_class_idx = 0
         num_images = 0
 
-        for ord_, rastered in self.iter_data_labels():
-            if not ord_ in DRasteredByOrd:
-                DOrdToClass[ord_] = cur_class_idx
-                LClassOrds.append(ord_)
+        for ord_, rastered in fn():
+            if not ord_ in self.DOrdToClass:
+                self.DOrdToClass[ord_] = cur_class_idx
+                self.LClassOrds.append(ord_)
                 cur_class_idx += 1
+
+            if not ord_ in DRasteredByOrd:
                 DRasteredByOrd[ord_] = []
 
             DRasteredByOrd[ord_].append(rastered)
@@ -111,22 +136,33 @@ class TomoeDataset:
 
             for rastered in LRastered:
                 data[xx, :, :] = rastered
-                labels[xx] = DOrdToClass[ord_]
+                labels[xx] = self.DOrdToClass[ord_]
                 xx += 1
 
                 if xx % 1000 == 0:
                     print("Data #:", xx)
 
-        data, labels = shuffle_in_unison_inplace(data, labels)
-        data = data / 255.0
+        return data, labels
 
-        self.train_images = data[self.num_test:]
-        self.train_labels = labels[self.num_test:]
-        self.test_images = data[:self.num_test]
-        self.test_labels = labels[:self.num_test]
-        self.class_names = np.asarray(LClassOrds, dtype='int32')
+    def __iter_kanjivg_data_labels(self):
+        """
+        Get from KanjiVG for validation
+        """
+        # TODO: Should this test on the whole sample or a small selection?
+        #   If using a small selection, will there be consequences if/if
+        #   not samples are randomly selected?
 
-    def iter_data_labels(self):
+        for ord_, LStrokes in iter_kanjivg_data():
+            print("Processing KanjiVG data:", ord_, chr(ord_))
+            aug = HWStrokesAugmenter(LStrokes, find_vertices=True)
+            rastered = aug.raster_strokes(
+                on_val=255,
+                image_size=self.image_size,
+                do_augment=False
+            )
+            yield ord_, rastered
+
+    def __iter_tomoe_data_labels(self):
         # Add from my data
         hr = HandwritingRegister()
         DStrokes = hr.get_D_strokes()

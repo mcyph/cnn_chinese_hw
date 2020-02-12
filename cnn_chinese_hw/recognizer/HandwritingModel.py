@@ -21,7 +21,7 @@ NUM_TEST = 0
 # my 4GB card won't run out of memory
 AUGMENTATIONS_PER_SAMPLE = 50
 OVERLAY_RANDOM = False
-CACHE_DATASET = True
+CACHE_DATASET = False
 CACHE_MODEL = False
 
 # For testing
@@ -66,11 +66,6 @@ class HandwritingModel:
             self.model = keras.models.load_model(self.model_path)
         else:
             self.model = self.cnn_model()
-
-            if SMALL_SAMPLE_ONLY:
-                self.model.save(self.model_path)
-            else:
-                self.model.save(self.model_path)
 
     def cnn_model(self):
         x_train, y_train = self.dataset.train_images, \
@@ -191,11 +186,30 @@ class HandwritingModel:
                 this.do_prediction(LCHECK_RASTERED, LCHECK_ORD,
                                    LAugRastered=LCHECK_RASTERED_AUG)
 
+        es = keras.callbacks.EarlyStopping(
+            monitor='val_loss',
+            mode='min',
+            verbose=1,
+            patience=3,
+            min_delta=1
+        )
+        mc = keras.callbacks.ModelCheckpoint(
+            self.model_path,
+            monitor='val_loss',
+            mode='min',
+            verbose=1,
+            save_best_only=True
+        )
         model.fit(
-            x=x_train, y=y_train,
+            x=x_train,
+            y=y_train,
             batch_size=BATCH_SIZE,
             epochs=NUM_EPOCHS,
-            callbacks=[MyCustomCallback()]
+            validation_data=(
+                self.dataset.test_images,
+                self.dataset.test_labels
+            ),
+            callbacks=[MyCustomCallback(), es, mc]
         )
         return model
 
