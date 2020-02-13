@@ -14,13 +14,7 @@ paper with a brush or pen.
 
 # Install
 
-``cnn_chinese_hw`` requires git lfs to download the trained tensorflow 
-lite model file when using ``git`` directly: 
-https://github.com/git-lfs/git-lfs/wiki/Installation.
-Alternatively, you could download this file from the GitHub web interface at 
-https://github.com/mcyph/cnn_chinese_hw/blob/master/cnn_chinese_hw/data/hw_quant_model.tflite.
-
-Then, type:
+Type:
 
     pip3 install git+https://github.com/mcyph/cnn_chinese_hw/cnn_chinese_hw.git
 
@@ -62,10 +56,9 @@ recognition.
 
 When the correct candidate isn't always the first one, it usually 
 is in the top few. Adding 
-[dropout](https://machinelearningmastery.com/how-to-reduce-overfitting-with-dropout-regularization-in-keras/) 
-to the dense (fully connected) layers and 
 [batch normalization](https://www.kdnuggets.com/2018/09/dropout-convolutional-networks.html) 
-to the convolutional 2d layers significantly improved results.
+to both the dense (fully connected) layers and convolutional 2d layers 
+significantly improved results.
 
 Because the data was drawn by only a few people, it may have trouble 
 recognising some people's handwriting, although I think it provides pretty good
@@ -73,6 +66,13 @@ results. I have added a few hundred characters which I have drawn myself,
 many of them with incorrect numbers of strokes/more or less curves so as to 
 increase the likelihood of the CNN being able to recognize different 
 people's handwriting, including non-native speakers. 
+
+It is validated against the KanjiVG data with an accuracy percentage of 
+around 86%. It's hard for me to say how well that translates to
+writing on a tablet/phone screen, or drawing with a mouse. However cursive 
+testing says it performs reasonably well, even if not as well as with 
+a tablet or pen. I may later combine my previous handwriting engine that 
+on compared x,y point positions and angles, augmenting the results. 
 
 # License
 
