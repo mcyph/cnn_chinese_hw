@@ -6,6 +6,18 @@ import matplotlib.pyplot as plt
 from cnn_chinese_hw.recognizer.TomoeDataset import TomoeDataset
 from cnn_chinese_hw.get_package_dir import get_package_dir
 
+
+"""
+The parameters I tried here that made the 
+most difference to the validation loss were:
+
+Changing dropout -> BatchNormalization: 2.4+ -> 2.01
+Changing from 50 augmented 
+    -> 50 aug and 10 copies of real strokes: -> 1.86
+Increase the random augmenter constants: -> 1.74 
+"""
+
+
 # use less memory than float32
 # OPEN ISSUE: Would it be better to support float16 here?
 keras.backend.set_floatx('float32')
@@ -28,7 +40,7 @@ AUGMENTATIONS_PER_SAMPLE = 40
 # How often to add the actual
 # (unmodified) strokes
 REAL_STROKES_PER_SAMPLE_TIMES = 10
-CACHE_DATASET = False
+CACHE_DATASET = True
 CACHE_MODEL = False
 
 # For testing
@@ -89,6 +101,8 @@ class HandwritingModel:
         # https://pdfs.semanticscholar.org/4941/aed85462968e9918110b4ba740c56030fd23.pdf
         # "Hands-On Machine Learning with Scikit-Learn and TensorFlow" by Aurelien Geron
         # https://www.kdnuggets.com/2018/09/dropout-convolutional-networks.html
+        # https://towardsdatascience.com/deep-study-of-a-not-very-deep-neural-network-part-2-activation-functions-fd9bd8d406fc
+        # https://missinglink.ai/guides/keras/keras-conv2d-working-cnn-2d-convolutions-keras/
 
         model = self.model = keras.Sequential([
             keras.layers.Convolution2D(input_shape=(IMAGE_SIZE, IMAGE_SIZE, 1),
@@ -96,16 +110,17 @@ class HandwritingModel:
                                        kernel_size=3,
                                        strides=1,
                                        padding='same',
-                                       # Maybe linear activation is a better option
-                                       # (i.e. commented out?)
-                                       activation='relu'
-                                       ),
+                                       activation='relu'),
             keras.layers.BatchNormalization(),
             keras.layers.Convolution2D(filters=64,
                                        kernel_size=3,
                                        padding='same',
-                                       activation='relu'
-                                       ),
+                                       activation='relu'),
+            keras.layers.BatchNormalization(),
+            keras.layers.Convolution2D(filters=64,
+                                       kernel_size=3,
+                                       padding='same',
+                                       activation='relu'),
             keras.layers.BatchNormalization(),
             keras.layers.MaxPool2D(pool_size=1,
                                    strides=2,
@@ -114,14 +129,17 @@ class HandwritingModel:
             keras.layers.Convolution2D(filters=128,
                                        kernel_size=3,
                                        padding='same',
-                                       activation='relu'
-                                       ),
+                                       activation='relu'),
             keras.layers.BatchNormalization(),
             keras.layers.Convolution2D(filters=128,
                                        kernel_size=3,
                                        padding='same',
-                                       activation='relu'
-                                       ),
+                                       activation='relu'),
+            keras.layers.BatchNormalization(),
+            keras.layers.Convolution2D(filters=128,
+                                       kernel_size=3,
+                                       padding='same',
+                                       activation='relu'),
             keras.layers.BatchNormalization(),
             keras.layers.MaxPool2D(pool_size=1,
                                    strides=2,
@@ -130,14 +148,17 @@ class HandwritingModel:
             keras.layers.Convolution2D(filters=256,
                                        kernel_size=3,
                                        padding='same',
-                                       activation='relu'
-                                       ),
+                                       activation='relu'),
             keras.layers.BatchNormalization(),
             keras.layers.Convolution2D(filters=256,
                                        kernel_size=3,
                                        padding='same',
-                                       activation='relu'
-                                       ),
+                                       activation='relu'),
+            keras.layers.BatchNormalization(),
+            keras.layers.Convolution2D(filters=256,
+                                       kernel_size=3,
+                                       padding='same',
+                                       activation='relu'),
             keras.layers.BatchNormalization(),
             keras.layers.MaxPool2D(pool_size=1,
                                    strides=2,
@@ -161,19 +182,19 @@ class HandwritingModel:
 
             keras.layers.Flatten(),
 
-            keras.layers.Dense(units=4096,
-                               activation='relu'),
-            keras.layers.BatchNormalization(),
-
             keras.layers.Dense(units=2048,
                                activation='relu'),
             keras.layers.BatchNormalization(),
 
-            keras.layers.Dense(units=2048,
+            keras.layers.Dense(units=1024,
                                activation='relu'),
             keras.layers.BatchNormalization(),
 
-            keras.layers.Dense(units=2048,
+            keras.layers.Dense(units=1024,
+                               activation='relu'),
+            keras.layers.BatchNormalization(),
+
+            keras.layers.Dense(units=1024,
                                activation='relu'),
 
             # Perhaps this is not the right place for this?
@@ -188,8 +209,11 @@ class HandwritingModel:
             optimizer=opt,
             #loss=keras.losses.categorical_crossentropy,
             loss=keras.losses.sparse_categorical_crossentropy,
-            metrics=['accuracy', #'mae'
-        ])
+            metrics=[
+                'accuracy',
+                #'mae'
+            ]
+        )
 
         this = self
         class MyCustomCallback(keras.callbacks.Callback):
@@ -197,15 +221,25 @@ class HandwritingModel:
                 this.do_prediction(LCHECK_RASTERED, LCHECK_ORD,
                                    LAugRastered=LCHECK_RASTERED_AUG)
 
+        # Suspect val_accuracy might be more important than
+        # val_loss, as the correct result should be the first
+        # one the majority of the time (seeing as it's a simple
+        # binary "was it correctly predicted"). Good idea to
+        # make sure val_loss doesn't get too high by a
+        # significant amount, though
+        #
+        # Interesting article:
+        # http://alexadam.ca/ml/2018/08/03/early-stopping.html
+
         es = keras.callbacks.EarlyStopping(
-            monitor='val_loss',
+            monitor='val_accuracy',
             verbose=1,
             patience=8,
             #min_delta=1
         )
         mc = keras.callbacks.ModelCheckpoint(
             self.model_path,
-            monitor='val_loss',
+            monitor='val_accuracy',
             verbose=1,
             save_best_only=True
         )
