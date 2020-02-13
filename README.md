@@ -16,7 +16,9 @@ paper with a brush or pen.
 
 Type:
 
-    pip3 install git+https://github.com/mcyph/cnn_chinese_hw/cnn_chinese_hw.git
+```console
+pip3 install git+https://github.com/mcyph/cnn_chinese_hw/cnn_chinese_hw.git
+```
 
 If you just want to get predictions, you don't need a full `tensorflow` install -
 you can use the instructions at https://www.tensorflow.org/lite/guide/python
@@ -26,27 +28,33 @@ the model can work on older processors which don't support the AVX extensions.
 In order to train the model however, you will need `tensorflow` at least version 2.0+.
 pip3 may need to be updated to do this.
 
-    pip3 install --upgrade pip
-    pip3 install tensorflow
+```console
+pip3 install --upgrade pip
+pip3 install tensorflow
+```
 
 # Recognize characters
 
-    from cnn_chinese_hw.recognizer.TFLiteRecognizer import TFLiteRecognizer
-    
-    rec = TFLiteRecognizer()
-    print(rec.get_L_candidates(
-        [[(208, 0), (199, 119), (94, 341)],
-         [(0, 461), (781, 520), (915, 520), (999, 479)],
-         [(189, 167), (213, 209), (238, 826), (268, 934), (203, 910)],
-         [(303, 514), (94, 766)],
-         [(462, 17), (497, 586), (522, 688), (646, 886), (796, 1000)],
-         [(716, 628), (462, 916)],
-         [(696, 101), (771, 155), (835, 251)]]
-    ))
+```python
+from cnn_chinese_hw.recognizer.TFLiteRecognizer import TFLiteRecognizer
+
+rec = TFLiteRecognizer()
+print(rec.get_L_candidates(
+    [[(208, 0), (199, 119), (94, 341)],
+     [(0, 461), (781, 520), (915, 520), (999, 479)],
+     [(189, 167), (213, 209), (238, 826), (268, 934), (203, 910)],
+     [(303, 514), (94, 766)],
+     [(462, 17), (497, 586), (522, 688), (646, 886), (796, 1000)],
+     [(716, 628), (462, 916)],
+     [(696, 101), (771, 155), (835, 251)]]
+))
+```
 
 This should recognize `我` (the ordinal of it, 25105):
 
-    [(0.99929094, 25105), (0.00034741702, 22941), (0.00023694134, 30330), ...]
+```python
+[(0.99929094, 25105), (0.00034741702, 22941), (0.00023694134, 30330), ...]
+```
 
 # Comments on Implementation
 
