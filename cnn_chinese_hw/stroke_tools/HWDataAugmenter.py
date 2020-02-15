@@ -6,7 +6,8 @@ from PIL import Image
 from matplotlib import cm
 from random import randint
 from cnn_chinese_hw.stroke_tools.points_normalized import points_normalized
-from cnn_chinese_hw.stroke_tools.points_to_plot import points_to_plot, draw_in_place
+from cnn_chinese_hw.stroke_tools.points_to_plot import points_to_plot, draw_in_place, draw_faded_brensenham_lines
+
 from cnn_chinese_hw.stroke_tools.get_vertex import get_vertex
 
 
@@ -60,9 +61,17 @@ class HWStrokesAugmenter:
 
         # Draw using the xiaolin wu antialised line algorithm,
         # outputting to a single-dimensional numpy array
-        a = np.zeros(shape=(image_size, image_size), dtype=np.uint8)
-        draw_in_place(a, strokes)
-        return a
+
+        if True:
+            r = np.zeros(shape=(image_size, image_size, 3), dtype=np.uint8)
+            draw_faded_brensenham_lines(r, strokes)
+        else:
+            a1 = np.zeros(shape=(image_size, image_size), dtype=np.uint8)
+            a2 = np.zeros(shape=(image_size, image_size), dtype=np.uint8)
+            draw_in_place(a1, strokes, reverse_direction=False)
+            draw_in_place(a2, strokes, reverse_direction=True)
+
+        return r
 
     def raster_strokes_multiple_times(self, on_val=10, image_size=24):
         a = np.zeros(shape=(image_size, image_size), dtype=np.uint8)
@@ -80,7 +89,15 @@ class HWStrokesAugmenter:
         """
         if myarray is None:
             myarray = self.raster_strokes(image_size=image_size)
-        im = Image.fromarray(np.uint8(cm.gist_earth(myarray) * 255))
+
+        cmyk = np.zeros((len(myarray), len(myarray), 4),
+                            dtype=np.uint8)
+        cmyk[:, :, 0] = myarray[:, :, 0]
+        cmyk[:, :, 1] = myarray[:, :, 1]
+        cmyk[:, :, 2] = myarray[:, :, 2]
+        #print(myarray)
+
+        im = Image.fromarray(cmyk, mode="CMYK")
         return im
 
     def __get_mid_coord(self, points):
@@ -273,17 +290,17 @@ if __name__ == '__main__':
 
         for i_LStrokes in LStrokes:
             strokes = [i.LPoints for i in i_LStrokes]
-            #print(chr(ord_), ord_, strokes)
+            print(chr(ord_), ord_, strokes)
             aug = HWStrokesAugmenter(strokes)
 
             # Render on top lots of times, to give an idea
             # of where the lines will end up on average.
             LRastered = [
-                aug.raster_strokes()
-                for x in range(256)
+                aug.raster_strokes(image_size=48)
+                for x in range(64)
             ]
             images = [aug.raster_strokes_as_pil(rastered)
                       for rastered in LRastered]
             im_joined(images).show()
-            time.sleep(10)
-    time.sleep(10)
+            time.sleep(5)
+    time.sleep(5)

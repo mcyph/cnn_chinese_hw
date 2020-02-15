@@ -18,15 +18,18 @@ class HandwritingRecogniserCanvas(HandwritingCanvas):
         HandwritingCanvas.__init__(self, parent, id, size)
 
     def process_lines(self, LVertices):
+        #print(LVertices)
+
         # Get the rastered character (normal)
         aug = HWStrokesAugmenter(LVertices)
         rastered = aug.raster_strokes(image_size=HandwritingModel.IMAGE_SIZE,
-                                      do_augment=False) / 255.0
+                                      do_augment=False)
 
         # Get the rastered character (randomly rotated, etc)
         LAugRastered = [
-            aug.raster_strokes(image_size=HandwritingModel.IMAGE_SIZE) / 255.0
-            for ___ in range(3)
+            aug.raster_strokes(
+                image_size=HandwritingModel.IMAGE_SIZE
+            ) for ___ in range(3)
         ]
 
         # Show the predictions using the
@@ -35,5 +38,5 @@ class HandwritingRecogniserCanvas(HandwritingCanvas):
                                     should_be_ord=0,
                                     LAugRastered=LAugRastered)
 
-        for score, ord_ in self.tflite_recognizer.get_L_candidates(LVertices, n_cands=10):
-            print(f"tflite prediction: {score} {chr(ord_)}")
+        #for score, ord_ in self.tflite_recognizer.get_L_candidates(LVertices, n_cands=10):
+        #    print(f"tflite prediction: {score} {chr(ord_)}")

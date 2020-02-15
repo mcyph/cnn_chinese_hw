@@ -1,5 +1,19 @@
+import numba
+
 
 def brensenham_line(x,y,x2,y2):
+    """
+    Brensenham line algorithm
+    """
+    LRtn = __brensenham_line(x, y, x2, y2)
+    if LRtn and LRtn[0][0] != x or LRtn[0][1] != y:
+        # Reverse list if the brensenham algo
+        # drew in the reverse order!
+        LRtn = LRtn[::-1]
+    return LRtn
+
+
+def __brensenham_line(x,y,x2,y2):
     """
     Brensenham line algorithm
     """

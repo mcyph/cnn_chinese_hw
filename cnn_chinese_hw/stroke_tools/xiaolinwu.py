@@ -25,25 +25,40 @@ COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
+import numba
 
 
-def point(array, x, y, alpha=255):
+@numba.njit()
+def point(array, x, y, alpha=255, opacity=1.0):
     """
     Set a pixel
     """
     if x < 0 or y < 0 or x > len(array[0]) - 1 or y > len(array[1]) - 1:  #CHECK ARRAY IDX!!!
         return
-    array[y, x] = min(array[y, x] + alpha, 255)
+
+    array[y, x] = max(
+        array[y, x],
+        min(array[y, x] + alpha, 255)*opacity
+    )
 
 
-def intensity(c, i):
+@numba.njit()
+def fading_line(array, x0, y0, x1, y1):
     """
-    Compute a new alpha given a 0-0xFF intensity
+    Draw a line which fades out
     """
-    return [c[0], c[1], c[2], (c[3] * i) >> 8]
+    one_third_x = (x1-x0)/3.0
+    one_third_y = (y1-y0)/3.0
+    two_thirds_x = one_third_x*2.0
+    two_thirds_y = one_third_y*2.0
+
+    line(array, x0, y0, x0+one_third_x, y0+one_third_y, 1.0)
+    line(array, x0+one_third_x, y0+one_third_y, x0+two_thirds_x, y0+two_thirds_y, 0.6)
+    line(array, x0+two_thirds_x, y0+two_thirds_y, x1, y1, 0.2)
 
 
-def line(array, x0, y0, x1, y1):
+@numba.njit()
+def line(array, x0, y0, x1, y1, opacity=1.0):
     """
     Draw a line using Xiaolin Wu's antialiasing technique
     """
@@ -62,21 +77,21 @@ def line(array, x0, y0, x1, y1):
     # 'easy' cases
     if dy == 0:
         for x in range(x0, x1, sx):
-            point(array, x, y0)
+            point(array, x, y0, 255, opacity)
         return
     if dx == 0:
         for y in range(y0, y1):
-            point(array, x0, y)
+            point(array, x0, y, 255, opacity)
         point(array, x1, y1)
         return
     if dx == dy:
         for x in range(x0, x1, sx):
-            point(array, x, y0)
+            point(array, x, y0, 255, opacity)
             y0 += 1
         return
 
     # main loop
-    point(array, x0, y0)
+    point(array, x0, y0, 255, opacity)
     e_acc = 0
     if dy > dx:  # vertical displacement
         e = (dx << 16) // dy
@@ -85,10 +100,10 @@ def line(array, x0, y0, x1, y1):
             if e_acc <= e_acc_temp:
                 x0 += sx
             w = 0xFF-(e_acc >> 8)
-            point(array, x0, y0, w)
+            point(array, x0, y0, w, opacity)
             y0 += 1
-            point(array, x0 + sx, y0, 0xFF - w)
-        point(array, x1, y1)
+            point(array, x0+sx, y0, 0xFF-w, opacity)
+        point(array, x1, y1, 255, opacity)
         return
 
     # horizontal displacement
@@ -98,7 +113,7 @@ def line(array, x0, y0, x1, y1):
         if e_acc <= e_acc_temp:
             y0 += 1
         w = 0xFF-(e_acc >> 8)
-        point(array, x0, y0, w)
+        point(array, x0, y0, w, opacity)
         x0 += sx
-        point(array, x0, y0 + 1, 0xFF-w)
-    point(array, x1, y1)
+        point(array, x0, y0+1, 0xFF-w, opacity)
+    point(array, x1, y1, 255, opacity)

@@ -91,13 +91,11 @@ class TomoeDataset:
     def __init_data(self):
         train_images, train_labels = self.__get_data(self.__iter_tomoe_data_labels)
         train_images, train_labels = shuffle_in_unison_inplace(train_images, train_labels)
-        train_images = train_images / 255.0
         self.train_images = train_images
         self.train_labels = train_labels
 
         test_images, test_labels = self.__get_data(self.__iter_kanjivg_data_labels)
         test_images, test_labels = shuffle_in_unison_inplace(test_images, test_labels)
-        test_images = test_images / 255.0
         self.test_images = test_images
         self.test_labels = test_labels
 
@@ -125,8 +123,9 @@ class TomoeDataset:
         # not-float64 bottom-out warning!
         data = np.zeros((num_images,
                          self.image_size,
-                         self.image_size),
-                        dtype=np.float32)
+                         self.image_size,
+                         2),
+                        dtype=np.uint8)
         labels = np.zeros(num_images, dtype=np.uint32)
 
         xx = 0
@@ -135,7 +134,8 @@ class TomoeDataset:
             del DRasteredByOrd[ord_]  # save memory
 
             for rastered in LRastered:
-                data[xx, :, :] = rastered
+                # Again am using uint8 to save memory during generation
+                data[xx, :, :, :] = rastered
                 labels[xx] = self.DOrdToClass[ord_]
                 xx += 1
 

@@ -28,10 +28,11 @@ NUM_EPOCHS = 1000
 # 128 -> 2.04
 # 256 -> 2.01
 # 1024 -> 2.016
-# 1024 is faster on my card+not much difference
-BATCH_SIZE = 1024
+# 512 is most I can fit into memory for 2 channel
+BATCH_SIZE = 384
 
 IMAGE_SIZE = 28
+CHANNELS = 3
 # How many times to augment each set of strokes
 # (i.e. rotate/scale/distort... etc)
 # 150 needs 8.69 GiB - want to be sure
@@ -40,7 +41,7 @@ AUGMENTATIONS_PER_SAMPLE = 40
 # How often to add the actual
 # (unmodified) strokes
 REAL_STROKES_PER_SAMPLE_TIMES = 10
-CACHE_DATASET = True
+CACHE_DATASET = False
 CACHE_MODEL = False
 
 # For testing
@@ -74,11 +75,23 @@ class HandwritingModel:
             #print("LABEL:", label, self.dataset.class_names[label], LCHECK_ORD)
             if self.dataset.class_names[label] == LCHECK_ORD:
                 print("FOUND!!!")
-                plt.matshow(self.dataset.train_images[x])
-                plt.show()
+                img = self.dataset.train_images[x]
+                self.matshow(img[:, :, 0], img[:, :, 1], img[:, :, 2])
+
                 xx += 1
                 if xx > 10:
                     break
+
+    def matshow(self, ch1, ch2=None, ch3=None):
+        three_chans = np.zeros(shape=(IMAGE_SIZE, IMAGE_SIZE, 3),
+                               dtype='uint8')
+        three_chans[:, :, 0] = ch1
+        if ch2 is not None:
+            three_chans[:, :, 1] = ch2
+        if ch3 is not None:
+            three_chans[:, :, 2] = ch3
+        plt.matshow(three_chans, interpolation='nearest')
+        plt.show()
 
     def run(self):
         if CACHE_MODEL:
@@ -89,11 +102,15 @@ class HandwritingModel:
     def cnn_model(self):
         x_train, y_train = self.dataset.train_images, \
                            self.dataset.train_labels
-        x_train = x_train.reshape(-1, IMAGE_SIZE, IMAGE_SIZE, 1)
+        x_train = x_train.astype('float32').reshape(
+            -1, IMAGE_SIZE, IMAGE_SIZE, CHANNELS
+        ) / 255.0
 
         x_val, y_val = self.dataset.test_images, \
                        self.dataset.test_labels
-        x_val = x_val.reshape(-1, IMAGE_SIZE, IMAGE_SIZE, 1)
+        x_val = x_val.astype('float32').reshape(
+            -1, IMAGE_SIZE, IMAGE_SIZE, CHANNELS
+        ) / 255.0
         print("NUM TRAIN VALUES:", x_val.shape)
 
         # Various resources I used in coming to these parameters:
@@ -105,7 +122,7 @@ class HandwritingModel:
         # https://missinglink.ai/guides/keras/keras-conv2d-working-cnn-2d-convolutions-keras/
 
         model = self.model = keras.Sequential([
-            keras.layers.Convolution2D(input_shape=(IMAGE_SIZE, IMAGE_SIZE, 1),
+            keras.layers.Convolution2D(input_shape=(IMAGE_SIZE, IMAGE_SIZE, CHANNELS),
                                        filters=64,  # Number of outputs
                                        kernel_size=3,
                                        strides=1,
@@ -204,7 +221,15 @@ class HandwritingModel:
             keras.layers.Dense(units=len(self.dataset.class_names),
                                activation=keras.activations.softmax),
         ])
-        opt = keras.optimizers.Adam(lr=1e-4)
+
+        # Save on memory
+        del self.dataset
+
+        # Not sure if Adam or SGD is better here.
+        # Suspect SGD might be slower to converge,
+        # but give better generalization.
+        opt = keras.optimizers.Adam(lr=1e-5)
+        #opt = keras.optimizers.SGD(learning_rate=0.01, nesterov=True)
         model.compile(
             optimizer=opt,
             #loss=keras.losses.categorical_crossentropy,
@@ -214,12 +239,6 @@ class HandwritingModel:
                 #'mae'
             ]
         )
-
-        this = self
-        class MyCustomCallback(keras.callbacks.Callback):
-            def on_epoch_end(self, epoch, logs=None):
-                this.do_prediction(LCHECK_RASTERED, LCHECK_ORD,
-                                   LAugRastered=LCHECK_RASTERED_AUG)
 
         # Suspect val_accuracy might be more important than
         # val_loss, as the correct result should be the first
@@ -234,7 +253,7 @@ class HandwritingModel:
         es = keras.callbacks.EarlyStopping(
             monitor='val_accuracy',
             verbose=1,
-            patience=8,
+            patience=15,
             #min_delta=1
         )
         mc = keras.callbacks.ModelCheckpoint(
@@ -249,18 +268,23 @@ class HandwritingModel:
             batch_size=BATCH_SIZE,
             epochs=NUM_EPOCHS,
             validation_data=(x_val, y_val),
-            callbacks=[MyCustomCallback(), es, mc]
+            callbacks=[es, mc]
         )
         return model
 
     def do_prediction(self, rastered, should_be_ord, LAugRastered=None):
-        plt.matshow(rastered)
-        plt.show()
-
         # Convert it to a format the model understands
-        rastered = rastered.reshape(-1, IMAGE_SIZE, IMAGE_SIZE, 1)
+        rastered = rastered.reshape(
+            -1, IMAGE_SIZE, IMAGE_SIZE, CHANNELS
+        ).astype('float32') / 255.0
         #rastered = rastered.reshape(-1, IMAGE_SIZE, IMAGE_SIZE)
-        #print("RASTERED:", rastered)
+        print("RASTERED:", rastered)
+
+        self.matshow(
+            rastered[0][:, :, 0]*255,
+            rastered[0][:, :, 1]*255,
+            rastered[0][:, :, 2]*255
+        )
 
         # Output the best prediction
         predictions = self.model.predict(rastered)
@@ -289,7 +313,9 @@ class HandwritingModel:
             result = np.zeros(shape=(len(self.dataset.class_names),),
                               dtype='float32')
             for i_rastered in LAugRastered:
-                i_rastered = i_rastered.reshape(-1, IMAGE_SIZE, IMAGE_SIZE, 1)
+                i_rastered = i_rastered.reshape(
+                    -1, IMAGE_SIZE, IMAGE_SIZE, CHANNELS
+                ).astype('float32') / 255.0
                 result += self.model.predict(i_rastered)[0]
 
             LPredict = []
@@ -322,26 +348,27 @@ if __name__ == '__main__':
               [(696, 101), (771, 155), (835, 251)]]
     LCHECK_ORD = ord('我')
 
-    aug = HWStrokesAugmenter(LCHECK)
+    aug = HWStrokesAugmenter(LCHECK,
+                             find_vertices=True)
     LCHECK_RASTERED = aug.raster_strokes(image_size=IMAGE_SIZE,
-                                         do_augment=False) / 255.0
+                                         do_augment=False).astype('float32') / 255.0
     plt.matshow(LCHECK_RASTERED)
     plt.show()
 
     LCHECK_RASTERED_AUG = [
-        aug.raster_strokes(image_size=IMAGE_SIZE) / 255.0
+        aug.raster_strokes(image_size=IMAGE_SIZE).astype('float32') / 255.0
         for ___ in range(20)
     ]
 
-    demo = HandwritingModel()
-    demo.run()
-    demo.do_prediction(LCHECK_RASTERED, LCHECK_ORD,
-                       LAugRastered=LCHECK_RASTERED_AUG)
+    hw_model = HandwritingModel()
+    hw_model.run()
+    #hw_model.do_prediction(LCHECK_RASTERED, LCHECK_ORD,
+    #                   LAugRastered=LCHECK_RASTERED_AUG)
 
-    for x, img in enumerate(demo.dataset.train_images):
-        should_be_ord = demo.dataset.class_names[demo.dataset.train_labels[x]]
-        print('ENUMERATE x:', x, demo.dataset.train_labels[x],
-              chr(should_be_ord))
-        demo.do_prediction(img, should_be_ord)
-        if x > 30:
-            break
+    #for x, img in enumerate(demo.dataset.train_images):
+    #    should_be_ord = hw_model.dataset.class_names[hw_model.dataset.train_labels[x]]
+    #    print('ENUMERATE x:', x, hw_model.dataset.train_labels[x],
+    #          chr(should_be_ord))
+    #    hw_model.do_prediction(img, should_be_ord)
+    #    if x > 30:
+    #        break
