@@ -10,9 +10,10 @@ except ImportError:
     import tensorflow
     Interpreter = tensorflow.lite.Interpreter
 
-# HACK: This should be moved from HandwritingModel
+# HACK: These should be moved from HandwritingModel
 # to remove dependency on (non-lite) tensorflow!
 IMAGE_SIZE = 28
+CHANNELS = 3
 
 from cnn_chinese_hw.get_package_dir import get_package_dir
 from cnn_chinese_hw.stroke_tools.HWDataAugmenter import HWStrokesAugmenter
@@ -57,7 +58,9 @@ class TFLiteRecognizer:
             image_size=IMAGE_SIZE,
             do_augment=False
         ) / 255.0
-        rastered = rastered.reshape(-1, IMAGE_SIZE, IMAGE_SIZE, 1)
+        rastered = rastered.reshape(
+            -1, IMAGE_SIZE, IMAGE_SIZE, CHANNELS
+        )
         rastered = rastered.astype('float32')
 
         with self.lock:

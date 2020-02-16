@@ -89,13 +89,22 @@ class TomoeDataset:
             )
 
     def __init_data(self):
-        train_images, train_labels = self.__get_data(self.__iter_tomoe_data_labels)
-        train_images, train_labels = shuffle_in_unison_inplace(train_images, train_labels)
+        train_images, train_labels = self.__get_data(
+            self.__iter_tomoe_data_labels
+        )
+        train_images, train_labels = shuffle_in_unison_inplace(
+            train_images, train_labels
+        )
         self.train_images = train_images
         self.train_labels = train_labels
 
-        test_images, test_labels = self.__get_data(self.__iter_kanjivg_data_labels)
-        test_images, test_labels = shuffle_in_unison_inplace(test_images, test_labels)
+        test_images, test_labels = self.__get_data(
+            self.__iter_kanjivg_data_labels,
+            allow_new_classes=False
+        )
+        test_images, test_labels = shuffle_in_unison_inplace(
+            test_images, test_labels
+        )
         self.test_images = test_images
         self.test_labels = test_labels
 
@@ -103,13 +112,20 @@ class TomoeDataset:
             self.LClassOrds, dtype='int32'
         )
 
-    def __get_data(self, fn):
+    def __get_data(self, fn, allow_new_classes=True):
         DRasteredByOrd = {}
         cur_class_idx = 0
         num_images = 0
 
         for ord_, rastered in fn():
             if not ord_ in self.DOrdToClass:
+                if not allow_new_classes:
+                    # Don't add chars from the validation set which
+                    # don't have a corresponding one drawn in the
+                    # training set
+                    print("Not adding new class:", ord_, chr(ord_))
+                    continue
+
                 self.DOrdToClass[ord_] = cur_class_idx
                 self.LClassOrds.append(ord_)
                 cur_class_idx += 1
@@ -121,10 +137,11 @@ class TomoeDataset:
             num_images += 1
 
         # not-float64 bottom-out warning!
+        from cnn_chinese_hw.recognizer.HandwritingModel import CHANNELS
         data = np.zeros((num_images,
                          self.image_size,
                          self.image_size,
-                         2),
+                         CHANNELS),
                         dtype=np.uint8)
         labels = np.zeros(num_images, dtype=np.uint32)
 

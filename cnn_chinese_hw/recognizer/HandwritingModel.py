@@ -41,7 +41,7 @@ AUGMENTATIONS_PER_SAMPLE = 40
 # How often to add the actual
 # (unmodified) strokes
 REAL_STROKES_PER_SAMPLE_TIMES = 10
-CACHE_DATASET = False
+CACHE_DATASET = True
 CACHE_MODEL = False
 
 # For testing
@@ -90,7 +90,10 @@ class HandwritingModel:
             three_chans[:, :, 1] = ch2
         if ch3 is not None:
             three_chans[:, :, 2] = ch3
-        plt.matshow(three_chans, interpolation='nearest')
+        plt.matshow(three_chans,
+                    interpolation='nearest',
+                    vmin=0.0,
+                    vmax=1.0)
         plt.show()
 
     def run(self):
@@ -121,115 +124,99 @@ class HandwritingModel:
         # https://towardsdatascience.com/deep-study-of-a-not-very-deep-neural-network-part-2-activation-functions-fd9bd8d406fc
         # https://missinglink.ai/guides/keras/keras-conv2d-working-cnn-2d-convolutions-keras/
 
+        l2 = keras.regularizers.l2
+        # If this value is too high, it will
+        #    underfit and be slow to converge.
+        # If it's too low, it will be allowed to overfit.
+        # I suspect the best value might be between 0.01-0.001
+        # 0.01 definitely underfits, not sure if 0.005 is too low/high.
+        # Suspect closer to 0.001 might be a good value.
+        l2_l = 0.002
+
+        def conv2d(filters):
+            return keras.layers.Convolution2D(
+                filters=filters,
+                kernel_size=3,
+                padding='same',
+                activation='elu',
+                kernel_regularizer=l2(l2_l)
+            )
+
+        def dense(units):
+            return keras.layers.Dense(
+                units=units,
+                activation='elu',
+                kernel_regularizer=l2(l2_l)
+            )
+
         model = self.model = keras.Sequential([
-            keras.layers.Convolution2D(input_shape=(IMAGE_SIZE, IMAGE_SIZE, CHANNELS),
+            keras.layers.Convolution2D(input_shape=(IMAGE_SIZE,
+                                                    IMAGE_SIZE,
+                                                    CHANNELS),
                                        filters=64,  # Number of outputs
+                                       # Might be a good idea to try 5,
+                                       # only for the first layer?
                                        kernel_size=3,
                                        strides=1,
                                        padding='same',
-                                       activation='relu'),
+                                       activation='elu',
+                                       kernel_regularizer=l2(l2_l)),
             keras.layers.BatchNormalization(),
-            keras.layers.Convolution2D(filters=64,
-                                       kernel_size=3,
-                                       padding='same',
-                                       activation='relu'),
+            conv2d(64),
             keras.layers.BatchNormalization(),
-            keras.layers.Convolution2D(filters=64,
-                                       kernel_size=3,
-                                       padding='same',
-                                       activation='relu'),
+            conv2d(64),
             keras.layers.BatchNormalization(),
             keras.layers.MaxPool2D(pool_size=1,
                                    strides=2,
                                    padding='same'),
 
-            keras.layers.Convolution2D(filters=128,
-                                       kernel_size=3,
-                                       padding='same',
-                                       activation='relu'),
+            conv2d(128),
             keras.layers.BatchNormalization(),
-            keras.layers.Convolution2D(filters=128,
-                                       kernel_size=3,
-                                       padding='same',
-                                       activation='relu'),
+            conv2d(128),
             keras.layers.BatchNormalization(),
-            keras.layers.Convolution2D(filters=128,
-                                       kernel_size=3,
-                                       padding='same',
-                                       activation='relu'),
-            keras.layers.BatchNormalization(),
+            #conv2d(128),
+            #keras.layers.BatchNormalization(),
             keras.layers.MaxPool2D(pool_size=1,
                                    strides=2,
                                    padding='same'),
 
-            keras.layers.Convolution2D(filters=256,
-                                       kernel_size=3,
-                                       padding='same',
-                                       activation='relu'),
+            conv2d(256),
             keras.layers.BatchNormalization(),
-            keras.layers.Convolution2D(filters=256,
-                                       kernel_size=3,
-                                       padding='same',
-                                       activation='relu'),
+            conv2d(256),
             keras.layers.BatchNormalization(),
-            keras.layers.Convolution2D(filters=256,
-                                       kernel_size=3,
-                                       padding='same',
-                                       activation='relu'),
-            keras.layers.BatchNormalization(),
+            #conv2d(256),
+            #keras.layers.BatchNormalization(),
             keras.layers.MaxPool2D(pool_size=1,
                                    strides=2,
                                    padding='same'),
-
-            #keras.layers.Convolution2D(filters=512,
-            #                           kernel_size=3,
-            #                           padding='same',
-            #                           activation='relu'),
-            #keras.layers.Convolution2D(filters=512,
-            #                           kernel_size=3,
-            #                           padding='same',
-            #                           activation='relu'),
-            #keras.layers.Convolution2D(filters=512,
-            #                           kernel_size=3,
-            #                           padding='same',
-            #                           activation='relu'),
-            #keras.layers.MaxPool2D(pool_size=1,
-            #                       strides=2,
-            #                       padding='same'),
 
             keras.layers.Flatten(),
 
-            keras.layers.Dense(units=2048,
-                               activation='relu'),
+            dense(2048),
             keras.layers.BatchNormalization(),
-
-            keras.layers.Dense(units=1024,
-                               activation='relu'),
+            dense(1024),
             keras.layers.BatchNormalization(),
-
-            keras.layers.Dense(units=1024,
-                               activation='relu'),
-            keras.layers.BatchNormalization(),
-
-            keras.layers.Dense(units=1024,
-                               activation='relu'),
+            #dense(1024),
+            #keras.layers.BatchNormalization(),
+            dense(1024),
 
             # Perhaps this is not the right place for this?
             # https://stats.stackexchange.com/questions/299292/dropout-makes-performance-worse
             #keras.layers.Dropout(0.5),
 
             keras.layers.Dense(units=len(self.dataset.class_names),
-                               activation=keras.activations.softmax),
+                               activation=keras.activations.softmax,
+                               kernel_regularizer=l2(l2_l))
         ])
-
         # Save on memory
         del self.dataset
 
         # Not sure if Adam or SGD is better here.
         # Suspect SGD might be slower to converge,
         # but give better generalization.
-        opt = keras.optimizers.Adam(lr=1e-5)
-        #opt = keras.optimizers.SGD(learning_rate=0.01, nesterov=True)
+        #opt = keras.optimizers.Adam(lr=1e-5)
+        # learning_rate of 0.01 might be best when testing?
+        opt = keras.optimizers.SGD(learning_rate=0.01, nesterov=True)
         model.compile(
             optimizer=opt,
             #loss=keras.losses.categorical_crossentropy,
