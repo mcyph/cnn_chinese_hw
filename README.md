@@ -5,7 +5,7 @@
 A convolutional neural network using Keras for recognising Chinese 
 (Simplified/Traditional) and Japanese Kanji licensed under the LGPL 2.1. 
 An advantage over many other open-source engines is that strokes can 
-be drawn out-of-order to a point. 
+be drawn out-of-order (to an extent). 
 
 It is intended to be used as an input method, and accepts x,y coordinate 
 points of strokes as input parameters. This differs from some other
