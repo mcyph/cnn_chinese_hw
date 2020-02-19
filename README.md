@@ -5,12 +5,14 @@
 A convolutional neural network using Keras for recognising Chinese 
 (Simplified/Traditional) and Japanese Kanji licensed under the LGPL 2.1. 
 An advantage over many other open-source engines is that strokes can 
-be drawn out-of-order. 
+be drawn out-of-order to a point. 
 
 It is intended to be used as an input method, and accepts x,y coordinate 
 points of strokes as input parameters. This differs from some other
 engines which are trained to recognise Kanji/Hanzi drawn on physical 
 paper with a brush or pen.
+
+![Recognizer Demo](docs/recogniser_demo.png)
 
 # Install
 
@@ -68,6 +70,10 @@ is in the top few. Adding
 to both the dense (fully connected) layers and convolutional 2d layers 
 significantly improved results.
 
+There are three channels - one for the start of strokes, one of the end, 
+and one which fades out towards the end, so as to make stroke order and 
+direction all criteria from which strokes are recognised. 
+
 Because the data was drawn by only a few people, it may have trouble 
 recognising some people's handwriting, although I think it provides pretty good
 results. I have added a few hundred characters which I have drawn myself, 
@@ -76,7 +82,7 @@ increase the likelihood of the CNN being able to recognize different
 people's handwriting, including non-native speakers. 
 
 It is validated against the KanjiVG data with an accuracy percentage of 
-around 86%. It's hard for me to say how well that translates to
+around 92%. It's hard for me to say how well that translates to
 writing on a tablet/phone screen, or drawing with a mouse. However cursive 
 testing says it performs reasonably well, even if not as well as with 
 a tablet or pen. I may later combine my previous handwriting engine that 
