@@ -85,7 +85,7 @@ It is validated against the KanjiVG data with an accuracy percentage of
 around 92%. It's hard for me to say how well that translates to
 writing on a tablet/phone screen, or drawing with a mouse. However cursive 
 testing says it performs reasonably well, even if not as well as with 
-a tablet or pen. I may later combine my previous handwriting engine that 
+a wacom tablet or pen. I may later combine my previous handwriting engine that 
 on compared x,y point positions and angles, augmenting the results. 
 
 # License
