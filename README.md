@@ -94,7 +94,7 @@ Because it uses [Tomoe](https://sourceforge.net/projects/tomoe/) data,
 I have put this project and my supplemental data under the same license 
 (LGPL 2.1). Compared to the license of some other publicly 
 available Chinese handwriting datasets, the LGPL is quite permissive 
-and allows for commercial use as well as for use in research.
+and allows for commercial use.
 
 [KanjiVG](https://kanjivg.tagaini.net/) data is also included for 
 validation purposes. This data is not combined when recognizing due 
