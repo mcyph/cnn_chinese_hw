@@ -47,5 +47,6 @@ setup(
     package_data = {
         '': ['*.xml', '*.txt', '*.tflite', '*.json'],
     },
+    include_package_data=True,
     zip_safe=False
 )
