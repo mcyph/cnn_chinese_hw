@@ -44,5 +44,8 @@ setup(
         #'tensorflow',
         'svg.path',
     ],
+    package_data = {
+        '': ['*.xml', '*.txt', '*.tflite', '*.json'],
+    },
     zip_safe=False
 )
