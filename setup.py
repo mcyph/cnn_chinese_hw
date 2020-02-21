@@ -13,7 +13,7 @@ with open(join(here, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name='cnn_chinese_hw',
-    version='0.1.0',
+    version='0.1.1',
     description='A convolutional neural network using Keras for recognising '
                 'Chinese (Simplified/Traditional) and Japanese Kanji',
     long_description=long_description,
@@ -43,6 +43,10 @@ setup(
     install_requires=[
         #'tensorflow',
         'svg.path',
+        'matplotlib',
+        'numpy',
+        'pillow',
+        'numba',
     ],
     package_data = {
         '': ['*.xml', '*.txt', '*.tflite', '*.json'],
