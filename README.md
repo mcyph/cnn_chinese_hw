@@ -19,7 +19,7 @@ paper with a brush or pen.
 Type:
 
 ```console
-pip3 install git+https://github.com/mcyph/cnn_chinese_hw/cnn_chinese_hw.git
+pip3 install git+https://github.com/mcyph/cnn_chinese_hw
 ```
 
 If you just want to get predictions, you don't need a full `tensorflow` install -
