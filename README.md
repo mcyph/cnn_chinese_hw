@@ -19,6 +19,8 @@ paper with a brush or pen.
 Type:
 
 ```console
+apt install git
+pip3 install numpy matplotlib pillow numba
 pip3 install git+https://github.com/mcyph/cnn_chinese_hw
 ```
 
