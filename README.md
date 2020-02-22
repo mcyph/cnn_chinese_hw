@@ -64,17 +64,17 @@ This should recognize `我` (the ordinal of it, 25105):
 
 It augments the Tomoe data: distorting from the center, randomizing the points, 
 rotating the characters and strokes to a degree to increase the likelihood of 
-recognition. 
+recognition. There are three channels - one for the start of strokes, one of 
+the end, and one which fades out towards the end, so as to make stroke order and 
+direction all criteria from which strokes are recognised. 
+
+> ![Augmented Strokes](docs/augmented_strokes.png)
 
 When the correct candidate isn't always the first one, it usually 
 is in the top few. Adding 
 [batch normalization](https://www.kdnuggets.com/2018/09/dropout-convolutional-networks.html) 
 to both the dense (fully connected) layers and convolutional 2d layers 
 significantly improved results.
-
-There are three channels - one for the start of strokes, one of the end, 
-and one which fades out towards the end, so as to make stroke order and 
-direction all criteria from which strokes are recognised. 
 
 Because the data was drawn by only a few people, it may have trouble 
 recognising some people's handwriting, although I think it provides pretty good
