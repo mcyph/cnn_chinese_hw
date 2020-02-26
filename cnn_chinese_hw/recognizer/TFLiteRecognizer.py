@@ -17,7 +17,6 @@ CHANNELS = 3
 
 from cnn_chinese_hw.get_package_dir import get_package_dir
 from cnn_chinese_hw.stroke_tools.HWDataAugmenter import HWStrokesAugmenter
-from cnn_chinese_hw.stroke_tools.get_vertex import get_vertex
 
 
 class TFLiteRecognizer:

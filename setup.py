@@ -41,12 +41,8 @@ setup(
     keywords='input ime handwriting cnn keras kanji hanzi chinese',
     packages=find_packages(),
     install_requires=[
-        #'tensorflow',
         'svg.path',
-        'matplotlib',
         'numpy',
-        'pillow',
-        'numba',
     ],
     package_data = {
         '': ['*.xml', '*.txt', '*.tflite', '*.json'],

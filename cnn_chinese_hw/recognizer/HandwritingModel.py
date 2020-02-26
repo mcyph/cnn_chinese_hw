@@ -131,7 +131,7 @@ class HandwritingModel:
         # I suspect the best value might be between 0.01-0.001
         # 0.01 definitely underfits, not sure if 0.005 is too low/high.
         # Suspect closer to 0.001 might be a good value.
-        l2_l = 0.002
+        l2_l = 0.0005
 
         def conv2d(filters):
             return keras.layers.Convolution2D(
@@ -214,9 +214,9 @@ class HandwritingModel:
         # Not sure if Adam or SGD is better here.
         # Suspect SGD might be slower to converge,
         # but give better generalization.
-        #opt = keras.optimizers.Adam(lr=1e-5)
+        opt = keras.optimizers.Adam(lr=1e-5)
         # learning_rate of 0.01 might be best when testing?
-        opt = keras.optimizers.SGD(learning_rate=0.01, nesterov=True)
+        #opt = keras.optimizers.SGD(learning_rate=0.01, nesterov=True)
         model.compile(
             optimizer=opt,
             #loss=keras.losses.categorical_crossentropy,

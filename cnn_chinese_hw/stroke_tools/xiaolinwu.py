@@ -25,10 +25,10 @@ COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
-import numba
+#import numba
 
 
-@numba.njit()
+#@numba.njit()
 def point(array, x, y, alpha=255, opacity=1.0):
     """
     Set a pixel
@@ -42,7 +42,7 @@ def point(array, x, y, alpha=255, opacity=1.0):
     )
 
 
-@numba.njit()
+#@numba.njit()
 def fading_line(array, x0, y0, x1, y1):
     """
     Draw a line which fades out
@@ -57,7 +57,7 @@ def fading_line(array, x0, y0, x1, y1):
     line(array, x0+two_thirds_x, y0+two_thirds_y, x1, y1, 0.2)
 
 
-@numba.njit()
+#@numba.njit()
 def line(array, x0, y0, x1, y1, opacity=1.0):
     """
     Draw a line using Xiaolin Wu's antialiasing technique

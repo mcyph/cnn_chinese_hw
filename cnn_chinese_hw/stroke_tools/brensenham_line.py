@@ -1,5 +1,3 @@
-import numba
-
 
 def brensenham_line(x,y,x2,y2):
     """

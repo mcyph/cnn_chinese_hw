@@ -1,12 +1,9 @@
 import math
 import random
-import matplotlib
 import numpy as np
-from PIL import Image
-from matplotlib import cm
 from random import randint
 from cnn_chinese_hw.stroke_tools.points_normalized import points_normalized
-from cnn_chinese_hw.stroke_tools.points_to_plot import points_to_plot, draw_in_place, draw_faded_brensenham_lines
+from cnn_chinese_hw.stroke_tools.points_to_plot import draw_in_place, draw_faded_brensenham_lines
 
 from cnn_chinese_hw.stroke_tools.get_vertex import get_vertex
 
@@ -97,6 +94,7 @@ class HWStrokesAugmenter:
         cmyk[:, :, 2] = myarray[:, :, 2]
         #print(myarray)
 
+        from PIL import Image
         im = Image.fromarray(cmyk, mode="CMYK")
         return im
 
@@ -265,6 +263,7 @@ if __name__ == '__main__':
         total_width = sum(widths)
         max_height = max(heights)
 
+        from PIL import Image
         new_im = Image.new('RGB', (total_width, max_height))
 
         x_offset = 0

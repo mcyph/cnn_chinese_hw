@@ -20,7 +20,7 @@ Type:
 
 ```console
 apt install git
-pip3 install numpy matplotlib pillow numba
+pip3 install svg.path numpy
 pip3 install git+https://github.com/mcyph/cnn_chinese_hw
 ```
 
@@ -36,6 +36,10 @@ pip3 may need to be updated to do this.
 pip3 install --upgrade pip
 pip3 install tensorflow
 ```
+
+There are also some demo wxPython recognizer/new stroke registry applications in
+the directory ``cnn_chinese_hw/gui``. These need wxPython, matplotlib and pillow 
+in addition.`
 
 # Recognize characters
 
@@ -84,7 +88,7 @@ increase the likelihood of the CNN being able to recognize different
 people's handwriting, including non-native speakers. 
 
 It is validated against the KanjiVG data with an accuracy percentage of 
-around 92%. It's hard for me to say how well that translates to
+around 94%. It's hard for me to say how well that translates to
 writing on a tablet/phone screen, or drawing with a mouse. However cursive 
 testing says it performs reasonably well, even if not as well as with 
 a wacom tablet or pen. I may later combine my previous handwriting engine that 
