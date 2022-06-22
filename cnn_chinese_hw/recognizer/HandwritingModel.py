@@ -54,11 +54,9 @@ class HandwritingModel:
         # Cache the Kanji data if possible,
         # as can take quite a long time itself
         if SMALL_SAMPLE_ONLY:
-            self.model_path = f'{get_package_dir()}/data/' \
-                              f'hw_model_sample.hdf5'
+            self.model_path = f'{get_package_dir()}/data/hw_model_sample.hdf5'
         else:
-            self.model_path = f'{get_package_dir()}/data/' \
-                              f'hw_model.hdf5'
+            self.model_path = f'{get_package_dir()}/data/hw_model.hdf5'
 
         self.dataset = TomoeDataset(
             image_size=IMAGE_SIZE,
