@@ -1,22 +1,18 @@
-from cnn_chinese_hw.recognizer.TFLiteRecognizer import TFLiteRecognizer
-from cnn_chinese_hw.client_server.rem_dupes import rem_dupes
-
-from speedysvc.rpc_decorators import json_method
+from speedysvc.service_method import service_method
 from speedysvc.client_server.base_classes.ServerMethodsBase import ServerMethodsBase
+
+from cnn_chinese_hw.client_server.rem_dupes import rem_dupes
+from cnn_chinese_hw.recognizer.TFLiteRecognizer import TFLiteRecognizer
 
 
 USE_ZINNIA = False
 
 
 class HWServer(ServerMethodsBase):
-    port = 40511
-    name = 'hw'
-
-    def __init__(self, logger_client):
+    def __init__(self):
         self.recognizer = TFLiteRecognizer()
-        ServerMethodsBase.__init__(self, logger_client)
 
-    @json_method
+    @service_method()
     def get_cn_written_cand(self, LStrokes, id):
         if not LStrokes:
             # TODO: Also handle single stroke candidates differently!
