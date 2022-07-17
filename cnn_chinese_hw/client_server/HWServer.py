@@ -18,11 +18,11 @@ class HWServer(ServerMethodsBase):
             # TODO: Also handle single stroke candidates differently!
             return {'LCands': [], 'id': id}
 
-        LRtn = [
+        return_list = [
             chr(ord_) for _, ord_ in
             self.recognizer.get_L_candidates(LStrokes)
         ]
 
-        LRtn = rem_dupes(LRtn)
-        DRtn = {'LCands': LRtn, 'id': id}
+        return_list = rem_dupes(return_list)
+        DRtn = {'LCands': return_list, 'id': id}
         return DRtn

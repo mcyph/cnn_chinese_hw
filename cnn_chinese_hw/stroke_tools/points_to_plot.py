@@ -3,7 +3,7 @@ from cnn_chinese_hw.stroke_tools.xiaolinwu import line, fading_line
 
 
 def points_to_plot(LStrokes):
-    LRtn = []
+    return_list = []
 
     for LStroke in LStrokes:
         i = 0
@@ -21,9 +21,9 @@ def points_to_plot(LStrokes):
 
             last_stroke = stroke
             i += 1
-        LRtn.append(LItem)
+        return_list.append(LItem)
 
-    return LRtn
+    return return_list
 
 
 def draw_faded_brensenham_lines(a, LStrokes):

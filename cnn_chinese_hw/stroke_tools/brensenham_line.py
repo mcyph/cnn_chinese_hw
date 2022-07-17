@@ -3,12 +3,12 @@ def brensenham_line(x,y,x2,y2):
     """
     Brensenham line algorithm
     """
-    LRtn = __brensenham_line(x, y, x2, y2)
-    if LRtn and LRtn[0][0] != x or LRtn[0][1] != y:
+    return_list = __brensenham_line(x, y, x2, y2)
+    if return_list and return_list[0][0] != x or return_list[0][1] != y:
         # Reverse list if the brensenham algo
         # drew in the reverse order!
-        LRtn = LRtn[::-1]
-    return LRtn
+        return_list = return_list[::-1]
+    return return_list
 
 
 def __brensenham_line(x,y,x2,y2):

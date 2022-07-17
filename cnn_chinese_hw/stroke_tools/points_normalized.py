@@ -31,7 +31,7 @@ def points_normalized(LStrokes, width=1000, height=1000):
     except ZeroDivisionError:
         y_num_times = 1
 
-    LRtn = []
+    return_list = []
     for LStroke in LStrokes:
         L = []
         for x, y in LStroke:
@@ -42,6 +42,6 @@ def points_normalized(LStrokes, width=1000, height=1000):
             x = max(0, min(round(x), width))  # should this be width-1?
             y = max(0, min(round(y), height))
             L.append((x, y))
-        LRtn.append(L)
-    #print("AFTER:", LRtn)
-    return LRtn
+        return_list.append(L)
+    #print("AFTER:", return_list)
+    return return_list

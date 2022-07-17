@@ -109,7 +109,7 @@ class StrokeMetrics:
         if normalize_points:
             LStrokes = points_normalized(LStrokes)
 
-        LRtn = []
+        return_list = []
 
         for LPoints in LStrokes:
             min_x = min(i[0] for i in LPoints)
@@ -117,7 +117,7 @@ class StrokeMetrics:
             max_x = max(i[0] for i in LPoints)
             max_y = max(i[1] for i in LPoints)
 
-            LRtn.append(Stroke(
+            return_list.append(Stroke(
                 x=min_x + ((max_x-min_x) / 2),
                 y=min_y + ((max_y-min_y) / 2),
                 width=max_x-min_x,
@@ -126,32 +126,32 @@ class StrokeMetrics:
                 LLengths=None # FIXME! ===================================================
             ))
 
-        return LRtn
+        return return_list
 
     def get_L_brensenham(self, LStroke):
         """
         Convert points to lines using
         the Brensenham algorithm
         """
-        LRtn = []
+        return_list = []
 
         for x in range(len(LStroke)-1):
-            LRtn.extend(brensenham_line(*(
+            return_list.extend(brensenham_line(*(
                 LStroke[x]+LStroke[x+1]
             )))
 
-        n_LRtn = []
+        new_return_list = []
         x = 0
         while 1:
-            if x >= len(LRtn):
+            if x >= len(return_list):
                 break
 
-            n_LRtn.append(LRtn[x])
-            x += (len(LRtn)//4) or 4 #VERTICE_EVERY
+            new_return_list.append(return_list[x])
+            x += (len(return_list)//4) or 4 #VERTICE_EVERY
 
-        if len(n_LRtn) < 2:
-            n_LRtn.append(LStroke[-1])
-        return n_LRtn
+        if len(new_return_list) < 2:
+            new_return_list.append(LStroke[-1])
+        return new_return_list
 
 
 if __name__ == '__main__':
