@@ -23,5 +23,5 @@ class HWServer:
         ]
 
         return_list = rem_dupes(return_list)
-        DRtn = {'LCands': return_list, 'id': id}
-        return DRtn
+        return_dict = {'LCands': return_list, 'id': id}
+        return return_dict

@@ -7,7 +7,7 @@ def points_to_plot(LStrokes):
 
     for LStroke in LStrokes:
         i = 0
-        LItem = []
+        item_list = []
         last_stroke = None
         for stroke in LStroke:
             if i > 0:
@@ -17,11 +17,11 @@ def points_to_plot(LStrokes):
                     stroke[0],
                     stroke[1]
                 )]
-                LItem.extend(LExtend)
+                item_list.extend(LExtend)
 
             last_stroke = stroke
             i += 1
-        return_list.append(LItem)
+        return_list.append(item_list)
 
     return return_list
 
@@ -29,7 +29,7 @@ def points_to_plot(LStrokes):
 def draw_faded_brensenham_lines(a, LStrokes):
     for j, LStroke in enumerate(LStrokes):
         i = 0
-        LItem = []
+        item_list = []
         last_stroke = None
         for stroke in LStroke:
             if i > 0:
@@ -39,16 +39,16 @@ def draw_faded_brensenham_lines(a, LStrokes):
                     stroke[0],
                     stroke[1]
                 )]
-                LItem.extend(LExtend)
+                item_list.extend(LExtend)
 
             last_stroke = stroke
             i += 1
 
-        for i, (x, y) in enumerate(LItem):
-            if len(LItem) == 1:
+        for i, (x, y) in enumerate(item_list):
+            if len(item_list) == 1:
                 stroke_pc = 1.0
             else:
-                stroke_pc = i / (len(LItem) - 1)
+                stroke_pc = i / (len(item_list) - 1)
 
             # Output the start and end of the strokes respectively
             # as separate layers, so as to prioritize correct

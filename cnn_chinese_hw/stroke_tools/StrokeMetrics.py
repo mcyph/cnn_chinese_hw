@@ -76,14 +76,14 @@ class StrokeMetrics:
         #print DChain, DChainRev, LStrokes
         #print DMatch
 
-        DRtn = {}
+        return_dict = {}
         SXNotUsed = set(range(len(LStrokes)))
 
         for x in list(DChain.keys()):
             if x in DChainRev:
                 continue
 
-            LOut = DRtn[x] = LStrokes[x][:]
+            out_list = return_dict[x] = LStrokes[x][:]
 
             while 1:
                 SXNotUsed.remove(x)
@@ -92,15 +92,15 @@ class StrokeMetrics:
                     break
 
                 y = DChain.pop(x)
-                LOut.extend(LStrokes[y])
+                out_list.extend(LStrokes[y])
 
                 x = y
 
         for x in sorted(SXNotUsed):
-            DRtn[x] = LStrokes[x]
+            return_dict[x] = LStrokes[x]
 
         return [
-            v for k, v in sorted(DRtn.items())
+            v for k, v in sorted(return_dict.items())
         ]
 
     def get_L_strokes(self, LStrokes,

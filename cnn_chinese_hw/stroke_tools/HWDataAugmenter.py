@@ -221,12 +221,12 @@ class HWStrokesAugmenter:
         y_sqrt = random.choice([False, True])
         y_pow = random.uniform(1.0, 1.25)
 
-        LOut = []
+        out_list = []
         for points in strokes:
-            LOut.append(self.__points_distorted_from_center(
+            out_list.append(self.__points_distorted_from_center(
                 points, x_sqrt, x_pow, y_sqrt, y_pow
             ))
-        return LOut
+        return out_list
 
     def __points_distorted_from_center(self, points, x_sqrt, x_pow, y_sqrt, y_pow):
         """

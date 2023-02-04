@@ -39,12 +39,12 @@ def _get_L_path(path):
     but I think it might be good enough to just use
     the control points
     """
-    LOut = []
+    out_list = []
     for i_path in path:
         if isinstance(i_path, Move):
             pass
         elif isinstance(i_path, CubicBezier):
-            LOut.extend((
+            out_list.extend((
                 (i_path.start.real, i_path.start.imag),
                 (i_path.control1.real, i_path.control1.imag),
                 (i_path.control2.real, i_path.control2.imag),
@@ -52,7 +52,7 @@ def _get_L_path(path):
             ))
         else:
             raise Exception("Unsupported:", i_path)
-    return LOut
+    return out_list
 
 
 if __name__ == '__main__':
