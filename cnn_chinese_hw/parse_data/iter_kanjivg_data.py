@@ -27,8 +27,8 @@ def iter_kanjivg_data(path=f'{get_package_dir()}/'
             elif line.startswith('<path id="kvg:'):
                 path = line.partition(' d="')[-1].strip('"/>')
                 path = parse_path(path)
-                LPath = _get_L_path(path)
-                LStrokes.append(LPath)
+                path_list = _get_L_path(path)
+                LStrokes.append(path_list)
 
     yield hex_ord, LStrokes
 
