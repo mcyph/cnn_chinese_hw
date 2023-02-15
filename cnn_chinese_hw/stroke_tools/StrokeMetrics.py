@@ -163,12 +163,12 @@ if __name__ == '__main__':
         [(0, 2), (0, 3)]
     ]))
 
-    LTry = [
+    try_list = [
         [(0, 74), (80, 875)],
         [(214, 40), (982, 214)],
         [(170, 1000), (929, 948)]
     ]
 
 
-    print(sm.combine_similar_vertices(LTry))
-    print(sm.get_L_strokes(LTry))
+    print(sm.combine_similar_vertices(try_list))
+    print(sm.get_L_strokes(try_list))
