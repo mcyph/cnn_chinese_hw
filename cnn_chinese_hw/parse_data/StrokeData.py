@@ -12,10 +12,10 @@ class StrokeData:
             'ja': self.get_stroke_data(
                 f'{get_package_dir()}/data/handwriting-ja.xml'
             ),
-            'cn': self.get_stroke_data(
+            'zh': self.get_stroke_data(
                 f'{get_package_dir()}/data/handwriting-zh_CN.xml'
             ),
-            'cn_Hant': self.get_stroke_data(
+            'zh-Hant': self.get_stroke_data(
                 f'{get_package_dir()}/data/handwriting-zh_TW.xml'
             )
         }
@@ -26,37 +26,37 @@ class StrokeData:
             L.extend(list(self.D[k][0].keys()))
         return sorted(self.D.keys())
 
-    def iter_len(self, len_, LKeys=None):
+    def iter_len(self, len_, keys_list=None):
         D = self.D
-        if LKeys is None:
-            LKeys = list(D.keys())
+        if keys_list is None:
+            keys_list = list(D.keys())
 
-        for key in LKeys:
+        for key in keys_list:
             if not len_ in D[key][0]:
                 continue
 
             for ord_, LStrokes in D[key][0][len_]:
                 yield key, ord_, LStrokes
 
-    def iter(self, LKeys=None):
-        if LKeys is None:
-            LKeys = list(self.D.keys())
+    def iter(self, keys_list=None):
+        if keys_list is None:
+            keys_list = list(self.D.keys())
 
         LOrds = []
-        for k in LKeys:
+        for k in keys_list:
             LOrds.extend(list(self.D[k][1].keys()))
 
         for ord_ in sorted(LOrds):
             yield ord_, self.get(
-                ord_, LKeys=LKeys
+                ord_, keys_list=keys_list
             )
 
-    def get(self, ord_, LKeys=None):
-        if LKeys is None:
-            LKeys = list(self.D.keys())
+    def get(self, ord_, keys_list=None):
+        if keys_list is None:
+            keys_list = list(self.D.keys())
 
         L = []
-        for k in LKeys:
+        for k in keys_list:
             if ord_ in self.D[k][1]:
                 L.append(self.D[k][1][ord_])
         return L
