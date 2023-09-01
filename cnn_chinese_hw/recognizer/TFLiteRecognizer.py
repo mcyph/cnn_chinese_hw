@@ -12,7 +12,7 @@ except ImportError:
 
 # HACK: These should be moved from HandwritingModel
 # to remove dependency on (non-lite) tensorflow!
-IMAGE_SIZE = 28
+IMAGE_SIZE = 20
 CHANNELS = 3
 
 from cnn_chinese_hw.get_package_dir import get_package_dir

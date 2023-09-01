@@ -1,6 +1,6 @@
 from cnn_chinese_hw.stroke_tools.HWDataAugmenter import HWStrokesAugmenter
 
-from tensorflow import keras
+from tensorflow import keras, config
 import numpy as np
 import matplotlib.pyplot as plt
 from cnn_chinese_hw.recognizer.TomoeDataset import TomoeDataset
@@ -20,7 +20,13 @@ Increase the random augmenter constants: -> 1.74
 
 # use less memory than float32
 # OPEN ISSUE: Would it be better to support float16 here?
-keras.backend.set_floatx('float32')
+#keras.backend.set_floatx('mixed_float16')
+keras.mixed_precision.set_global_policy('mixed_float16')
+
+#gpus = config.list_physical_devices('GPU')
+#for gpu in gpus:
+    #config.experimental.set_virtual_device_configuration(gpu, [config.experimental.VirtualDeviceConfiguration(memory_limit=8192)])
+#    config.experimental.set_memory_growth(gpu, True)
 
 
 NUM_EPOCHS = 1000
@@ -29,9 +35,9 @@ NUM_EPOCHS = 1000
 # 256 -> 2.01
 # 1024 -> 2.016
 # 512 is most I can fit into memory for 2 channel
-BATCH_SIZE = 384
+BATCH_SIZE = 128
 
-IMAGE_SIZE = 28
+IMAGE_SIZE = 20
 CHANNELS = 3
 # How many times to augment each set of strokes
 # (i.e. rotate/scale/distort... etc)
@@ -42,7 +48,7 @@ AUGMENTATIONS_PER_SAMPLE = 40
 # (unmodified) strokes
 REAL_STROKES_PER_SAMPLE_TIMES = 10
 CACHE_DATASET = True
-CACHE_MODEL = False
+CACHE_MODEL = True
 
 # For testing
 SMALL_SAMPLE_ONLY = False
@@ -136,14 +142,14 @@ class HandwritingModel:
                 filters=filters,
                 kernel_size=3,
                 padding='same',
-                activation='elu',
+                activation='relu',
                 kernel_regularizer=l2(l2_l)
             )
 
         def dense(units):
             return keras.layers.Dense(
                 units=units,
-                activation='elu',
+                activation='relu',
                 kernel_regularizer=l2(l2_l)
             )
 
@@ -157,7 +163,7 @@ class HandwritingModel:
                                        kernel_size=3,
                                        strides=1,
                                        padding='same',
-                                       activation='elu',
+                                       activation='relu',
                                        kernel_regularizer=l2(l2_l)),
             keras.layers.BatchNormalization(),
             conv2d(64),
@@ -190,13 +196,13 @@ class HandwritingModel:
 
             keras.layers.Flatten(),
 
-            dense(2048),
-            keras.layers.BatchNormalization(),
             dense(1024),
             keras.layers.BatchNormalization(),
-            #dense(1024),
+            dense(512),
+            keras.layers.BatchNormalization(),
+            dense(512),
             #keras.layers.BatchNormalization(),
-            dense(1024),
+            #dense(1024),
 
             # Perhaps this is not the right place for this?
             # https://stats.stackexchange.com/questions/299292/dropout-makes-performance-worse
@@ -212,7 +218,9 @@ class HandwritingModel:
         # Not sure if Adam or SGD is better here.
         # Suspect SGD might be slower to converge,
         # but give better generalization.
-        opt = keras.optimizers.Adam(lr=1e-5)
+        opt = keras.optimizers.Adam(learning_rate=1e-5,
+                                    #clipnorm=1.0
+                                    )
         # learning_rate of 0.01 might be best when testing?
         #opt = keras.optimizers.SGD(learning_rate=0.01, nesterov=True)
         model.compile(
@@ -220,8 +228,9 @@ class HandwritingModel:
             #loss=keras.losses.categorical_crossentropy,
             loss=keras.losses.sparse_categorical_crossentropy,
             metrics=[
+                #'mse',
                 'accuracy',
-                #'mae'
+                'mae',
             ]
         )
 
@@ -238,7 +247,7 @@ class HandwritingModel:
         es = keras.callbacks.EarlyStopping(
             monitor='val_accuracy',
             verbose=1,
-            patience=15,
+            patience=50,
             #min_delta=1
         )
         mc = keras.callbacks.ModelCheckpoint(
