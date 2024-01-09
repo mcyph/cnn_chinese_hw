@@ -169,9 +169,9 @@ class TomoeDataset:
         #   If using a small selection, will there be consequences if/if
         #   not samples are randomly selected?
 
-        for ord_, LStrokes in iter_kanjivg_data():
+        for ord_, strokes_list in iter_kanjivg_data():
             print("Processing KanjiVG data:", ord_, chr(ord_))
-            aug = HWStrokesAugmenter(LStrokes, find_vertices=True)
+            aug = HWStrokesAugmenter(strokes_list, find_vertices=True)
             rastered = aug.raster_strokes(
                 image_size=self.image_size,
                 do_augment=False
@@ -182,9 +182,9 @@ class TomoeDataset:
         # Add from my data
         hr = HandwritingRegister()
         DStrokes = hr.get_D_strokes()
-        for ord_, LStrokes in DStrokes.items():
+        for ord_, strokes_list in DStrokes.items():
             print("Processing my data:", ord_, chr(ord_))
-            for i_LStrokes in LStrokes:
+            for i_LStrokes in strokes_list:
                 i_LStrokes = points_normalized(i_LStrokes)
                 i_LStrokes = [get_vertex(i) for i in i_LStrokes]
 
@@ -212,7 +212,7 @@ class TomoeDataset:
         )
         SAdded = set()
 
-        for xx, (ord_, LStrokes) in enumerate(sd.iter()):
+        for xx, (ord_, strokes_list) in enumerate(sd.iter()):
             if ord_ in SAlwaysAdd:
                 pass
             elif self.small_sample_only and xx > self.small_sample_size:
@@ -222,14 +222,14 @@ class TomoeDataset:
             # Remove duplicate data from Chinese Simplified+Traditional/Japanese
             m = md5()
             m.update(chr(ord_).encode('utf-8'))
-            m.update(json.dumps(LStrokes).encode('ascii'))
+            m.update(json.dumps(strokes_list).encode('ascii'))
             digest = m.digest()
             if digest in SAdded:
                 print("Ignoring dupe data:", ord_, chr(ord_))
                 continue
             SAdded.add(digest)
 
-            for i_LStrokes in LStrokes:
+            for i_LStrokes in strokes_list:
                 strokes = [i.LPoints for i in i_LStrokes]
                 aug = HWStrokesAugmenter(strokes)
                 for __ in range(self.augmentations_per_sample):

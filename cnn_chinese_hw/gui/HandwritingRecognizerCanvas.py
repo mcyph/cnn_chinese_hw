@@ -38,5 +38,5 @@ class HandwritingRecogniserCanvas(HandwritingCanvas):
                                     should_be_ord=0,
                                     LAugRastered=LAugRastered)
 
-        for score, ord_ in self.tflite_recognizer.get_L_candidates(LVertices, n_cands=10):
+        for score, ord_ in self.tflite_recognizer.get_candidates_list(LVertices, n_cands=10):
             print(f"tflite prediction: {score} {chr(ord_)}")

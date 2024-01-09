@@ -282,12 +282,12 @@ if __name__ == '__main__':
     #  https://github.com/Gsllchb/Handright
     # This may be able to augment the dataset
 
-    for ord_, LStrokes in sd.iter():
+    for ord_, strokes_list in sd.iter():
         if SKIP:
             SKIP -= 1
             continue
 
-        for i_LStrokes in LStrokes:
+        for i_LStrokes in strokes_list:
             strokes = [i.LPoints for i in i_LStrokes]
             print(chr(ord_), ord_, strokes)
             aug = HWStrokesAugmenter(strokes)

@@ -47,7 +47,7 @@ in addition.`
 from cnn_chinese_hw.recognizer.TFLiteRecognizer import TFLiteRecognizer
 
 rec = TFLiteRecognizer()
-print(rec.get_L_candidates(
+print(rec.get_candidates_list(
     [[(208, 0), (199, 119), (94, 341)],
      [(0, 461), (781, 520), (915, 520), (999, 479)],
      [(189, 167), (213, 209), (238, 826), (268, 934), (203, 910)],

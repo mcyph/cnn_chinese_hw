@@ -35,8 +35,8 @@ class StrokeData:
             if not len_ in D[key][0]:
                 continue
 
-            for ord_, LStrokes in D[key][0][len_]:
-                yield key, ord_, LStrokes
+            for ord_, strokes_list in D[key][0][len_]:
+                yield key, ord_, strokes_list
 
     def iter(self, keys_list=None):
         if keys_list is None:
@@ -65,15 +65,15 @@ class StrokeData:
         DLCandLens = {}
         DCands = {}
 
-        for ord_, LStrokes in iter_tomoe_data(path):
+        for ord_, strokes_list in iter_tomoe_data(path):
             # Add stroke angle etc information
-            #print ord_, LStrokes
-            LStrokes = stroke_metrics.get_L_strokes(LStrokes)
+            #print ord_, strokes_list
+            strokes_list = stroke_metrics.get_L_strokes(strokes_list)
 
-            DLCandLens.setdefault(len(LStrokes), []).append(
-                (ord_, LStrokes)
+            DLCandLens.setdefault(len(strokes_list), []).append(
+                (ord_, strokes_list)
             )
-            DCands[ord_] = LStrokes
+            DCands[ord_] = strokes_list
 
         return DLCandLens, DCands
 

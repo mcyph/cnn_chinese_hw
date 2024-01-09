@@ -16,7 +16,7 @@ MAX_DIFF = 0 #20*20 #300*300
 
 
 class StrokeMetrics:
-    def combine_similar_vertices(self, LStrokes):
+    def combine_similar_vertices(self, strokes_list):
         """
         "Chains" strokes if they're very close to each other.
 
@@ -26,13 +26,13 @@ class StrokeMetrics:
         configurations as I think that'd cause more problems
         than it's worth...
         """
-        return LStrokes # HACK! =============================================================
+        return strokes_list # HACK! =============================================================
 
         DMatch = {}
         DMatchRev = {}
 
-        for x, LStroke1 in enumerate(LStrokes):
-            for y, LStroke2 in enumerate(LStrokes):
+        for x, LStroke1 in enumerate(strokes_list):
+            for y, LStroke2 in enumerate(strokes_list):
                 if x == y:
                     continue
 
@@ -72,18 +72,18 @@ class StrokeMetrics:
             DChainRev[y] = x
 
         #for x, y in DChain.items():
-        #    print x, y, LStrokes[x], LStrokes[y]
-        #print DChain, DChainRev, LStrokes
+        #    print x, y, strokes_list[x], strokes_list[y]
+        #print DChain, DChainRev, strokes_list
         #print DMatch
 
         return_dict = {}
-        SXNotUsed = set(range(len(LStrokes)))
+        SXNotUsed = set(range(len(strokes_list)))
 
         for x in list(DChain.keys()):
             if x in DChainRev:
                 continue
 
-            out_list = return_dict[x] = LStrokes[x][:]
+            out_list = return_dict[x] = strokes_list[x][:]
 
             while 1:
                 SXNotUsed.remove(x)
@@ -92,26 +92,26 @@ class StrokeMetrics:
                     break
 
                 y = DChain.pop(x)
-                out_list.extend(LStrokes[y])
+                out_list.extend(strokes_list[y])
 
                 x = y
 
         for x in sorted(SXNotUsed):
-            return_dict[x] = LStrokes[x]
+            return_dict[x] = strokes_list[x]
 
         return [
             v for k, v in sorted(return_dict.items())
         ]
 
-    def get_L_strokes(self, LStrokes,
+    def get_L_strokes(self, strokes_list,
                             normalize_points=True):
 
         if normalize_points:
-            LStrokes = points_normalized(LStrokes)
+            strokes_list = points_normalized(strokes_list)
 
         return_list = []
 
-        for LPoints in LStrokes:
+        for LPoints in strokes_list:
             min_x = min(i[0] for i in LPoints)
             min_y = min(i[1] for i in LPoints)
             max_x = max(i[0] for i in LPoints)
@@ -128,16 +128,16 @@ class StrokeMetrics:
 
         return return_list
 
-    def get_L_brensenham(self, LStroke):
+    def get_L_brensenham(self, stroke_list):
         """
         Convert points to lines using
         the Brensenham algorithm
         """
         return_list = []
 
-        for x in range(len(LStroke)-1):
+        for x in range(len(stroke_list)-1):
             return_list.extend(brensenham_line(*(
-                LStroke[x]+LStroke[x+1]
+                stroke_list[x]+stroke_list[x+1]
             )))
 
         new_return_list = []
@@ -150,7 +150,7 @@ class StrokeMetrics:
             x += (len(return_list)//4) or 4 #VERTICE_EVERY
 
         if len(new_return_list) < 2:
-            new_return_list.append(LStroke[-1])
+            new_return_list.append(stroke_list[-1])
         return new_return_list
 
 

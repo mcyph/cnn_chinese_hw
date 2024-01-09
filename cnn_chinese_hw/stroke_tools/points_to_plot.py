@@ -2,14 +2,14 @@ from cnn_chinese_hw.stroke_tools.brensenham_line import brensenham_line
 from cnn_chinese_hw.stroke_tools.xiaolinwu import line, fading_line
 
 
-def points_to_plot(LStrokes):
+def points_to_plot(strokes_list):
     return_list = []
 
-    for LStroke in LStrokes:
+    for stroke_list in strokes_list:
         i = 0
         item_list = []
         last_stroke = None
-        for stroke in LStroke:
+        for stroke in stroke_list:
             if i > 0:
                 LExtend = [(int(x), int(y)) for x, y in brensenham_line(
                     last_stroke[0],
@@ -26,12 +26,12 @@ def points_to_plot(LStrokes):
     return return_list
 
 
-def draw_faded_brensenham_lines(a, LStrokes):
-    for j, LStroke in enumerate(LStrokes):
+def draw_faded_brensenham_lines(a, strokes_list):
+    for j, stroke_list in enumerate(strokes_list):
         i = 0
         item_list = []
         last_stroke = None
-        for stroke in LStroke:
+        for stroke in stroke_list:
             if i > 0:
                 LExtend = [(int(x), int(y)) for x, y in brensenham_line(
                     last_stroke[0],
@@ -63,8 +63,8 @@ def draw_faded_brensenham_lines(a, LStrokes):
             # I haven't added the inverse direction, as it might
             # be useful to allow predictions for a few less strokes.
             strokes_pc = (
-                j / len(LStrokes)-1
-                if len(LStrokes) > 1
+                j / len(strokes_list)-1
+                if len(strokes_list) > 1
                 else 1.0
             )
 
@@ -73,11 +73,11 @@ def draw_faded_brensenham_lines(a, LStrokes):
             a[y, x, 2] = max(a[y, x, 2], (1.0-strokes_pc)*255)
 
 
-def draw_in_place(array, LStrokes, reverse_direction=False):
-    for LStroke in LStrokes:
+def draw_in_place(array, strokes_list, reverse_direction=False):
+    for stroke_list in strokes_list:
         i = 0
         last_stroke = None
-        for stroke in LStroke:
+        for stroke in stroke_list:
             if not i:
                 i += 1
                 last_stroke = stroke
@@ -88,17 +88,17 @@ def draw_in_place(array, LStrokes, reverse_direction=False):
                     stroke[0], stroke[1],
                     last_stroke[0], last_stroke[1]
                 )
-                if len(LStroke) > 2:
-                    pc = 1.0-((i - 1) / (len(LStroke) - 2))
+                if len(stroke_list) > 2:
+                    pc = 1.0-((i - 1) / (len(stroke_list) - 2))
             else:
                 x1, y1, x2, y2 = (
                     last_stroke[0], last_stroke[1],
                     stroke[0], stroke[1]
                 )
-                if len(LStroke) > 2:
-                    pc = (i - 1) / (len(LStroke) - 2)
+                if len(stroke_list) > 2:
+                    pc = (i - 1) / (len(stroke_list) - 2)
 
-            if i > 0 and len(LStroke) == 2:
+            if i > 0 and len(stroke_list) == 2:
                 # Single set of points: fade as a whole
                 #print(stroke, last_stroke)
                 fading_line(array, x1, y1, x2, y2)

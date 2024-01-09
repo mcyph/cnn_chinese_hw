@@ -10,7 +10,7 @@ def iter_kanjivg_data(path=f'{get_package_dir()}/'
     like the radicals etc as I'm mainly using this for verification.
     """
     hex_ord = None
-    LStrokes = []
+    strokes_list = []
 
     with open(path, 'r', encoding='utf-8') as f:
         for line in f:
@@ -18,19 +18,19 @@ def iter_kanjivg_data(path=f'{get_package_dir()}/'
 
             if line.startswith('<kanji id="kvg:kanji_'):
                 if hex_ord:
-                    yield hex_ord, LStrokes
+                    yield hex_ord, strokes_list
 
                 hex_ord = int(line.partition(
                     '<kanji id="kvg:kanji_'
                 )[-1].strip('">'), 16)
-                LStrokes = []
+                strokes_list = []
             elif line.startswith('<path id="kvg:'):
                 path = line.partition(' d="')[-1].strip('"/>')
                 path = parse_path(path)
                 path_list = _get_L_path(path)
-                LStrokes.append(path_list)
+                strokes_list.append(path_list)
 
-    yield hex_ord, LStrokes
+    yield hex_ord, strokes_list
 
 
 def _get_L_path(path):

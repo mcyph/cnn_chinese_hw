@@ -1,9 +1,9 @@
 from sys import maxsize
 
 
-def points_normalized(LStrokes, width=1000, height=1000):
+def points_normalized(strokes_list, width=1000, height=1000):
     """
-    Make sure the borders of LStrokes are 
+    Make sure the borders of strokes_list are 
     the same between the two sets of data
     """
     min_x = maxsize
@@ -11,8 +11,8 @@ def points_normalized(LStrokes, width=1000, height=1000):
     min_y = maxsize
     max_y = -maxsize
 
-    for LStroke in LStrokes:
-        for x, y in LStroke:
+    for stroke_list in strokes_list:
+        for x, y in stroke_list:
             # TODO: What if max_x is GREATER than min_x?
             if x < min_x: min_x = x
             if y < min_y: min_y = y
@@ -32,9 +32,9 @@ def points_normalized(LStrokes, width=1000, height=1000):
         y_num_times = 1
 
     return_list = []
-    for LStroke in LStrokes:
+    for stroke_list in strokes_list:
         L = []
-        for x, y in LStroke:
+        for x, y in stroke_list:
             x -= min_x
             y -= min_y
             x *= x_num_times

@@ -12,7 +12,7 @@ except ImportError:
 
 # HACK: These should be moved from HandwritingModel
 # to remove dependency on (non-lite) tensorflow!
-IMAGE_SIZE = 20
+IMAGE_SIZE = 28
 CHANNELS = 3
 
 from cnn_chinese_hw.get_package_dir import get_package_dir
@@ -40,11 +40,11 @@ class TFLiteRecognizer:
 
         self.lock = _thread.allocate_lock()
 
-    def get_L_candidates(self, LStrokes, n_cands=20):
+    def get_candidates_list(self, strokes_list, n_cands=20):
         """
         Get Kanji/Hanzi handwriting candidates
 
-        :param LStrokes: a list of strokes in x,y point format
+        :param strokes_list: a list of strokes in x,y point format
                          [[(x, y), ...], ...]
         :param n_cands: number of candidates to return
         :return: a list of [(candidate score, candidate ordinal), ...]
@@ -52,7 +52,7 @@ class TFLiteRecognizer:
         """
 
         # Get the rastered character (normal)
-        aug = HWStrokesAugmenter(LStrokes, find_vertices=True)
+        aug = HWStrokesAugmenter(strokes_list, find_vertices=True)
         rastered = aug.raster_strokes(
             image_size=IMAGE_SIZE,
             do_augment=False
@@ -84,4 +84,4 @@ class TFLiteRecognizer:
 if __name__ == '__main__':
     recognizer = TFLiteRecognizer()
     for x in range(10000):
-        print(recognizer.get_L_candidates([]))
+        print(recognizer.get_candidates_list([]))
