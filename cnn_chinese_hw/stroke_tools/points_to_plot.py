@@ -63,7 +63,7 @@ def draw_faded_brensenham_lines(a, strokes_list):
             # I haven't added the inverse direction, as it might
             # be useful to allow predictions for a few less strokes.
             strokes_pc = (
-                j / len(strokes_list)-1
+                j / (len(strokes_list)-1)
                 if len(strokes_list) > 1
                 else 1.0
             )
