@@ -9,7 +9,7 @@ class HWServer:
     def __init__(self):
         self.recognizer = TFLiteRecognizer()
 
-    def get_cn_written_cand(self, strokes_list, id):
+    def get_chinese_written_candidates(self, strokes_list, id):
         if not strokes_list:
             # TODO: Also handle single stroke candidates differently!
             return {'cands_list': [], 'id': id}
