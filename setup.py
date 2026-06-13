@@ -54,6 +54,8 @@ setup(
         'onnx': ['onnx', 'onnxruntime'],
         # Only needed for the wxPython demo GUIs.
         'gui': ['wxPython', 'matplotlib', 'pillow'],
+        # Test suite.
+        'test': ['pytest'],
     },
     package_data={
         '': ['*.xml', '*.txt', '*.json', '*.pt'],

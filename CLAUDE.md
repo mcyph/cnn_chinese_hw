@@ -40,6 +40,10 @@ has `torch` (CUDA) installed.
 - **Inference**: `HandwritingRecognizer().get_candidates_list(strokes)` returns
   `[(score, ordinal), ...]`. The `HWServer` wrapper returns
   `{'cands_list': [...], 'id': ...}`.
+- **Tests**: `PYTHONPATH=. pytest tests/ -q` — fast, CPU-only checks of the
+  directMap encoding, model forward/backward, training building blocks (GRN,
+  EMA warm-up, Mixup/CutMix, SAM) and the inference path + public API contract
+  (via a synthetic checkpoint, so no trained model is required).
 
 > **No checkpoint ships in the repo** — recognition (and the `dicts_api`
 > handwriting endpoint) needs a model trained first via the command above.
