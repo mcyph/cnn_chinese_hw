@@ -38,12 +38,23 @@ def export(checkpoint_path=None, onnx_path=None, use_ema=True, quantize=False):
     model.eval()
 
     dummy = torch.zeros(1, data_cfg.channels, data_cfg.image_size, data_cfg.image_size)
-    torch.onnx.export(
-        model, dummy, onnx_path,
-        input_names=['directmap'], output_names=['logits'],
-        dynamic_axes={'directmap': {0: 'batch'}, 'logits': {0: 'batch'}},
-        opset_version=17,
-    )
+    # Prefer the modern TorchDynamo-based exporter (the legacy TorchScript path
+    # is deprecated in recent PyTorch); fall back if it is unavailable.
+    try:
+        torch.onnx.export(
+            model, (dummy,), onnx_path,
+            input_names=['directmap'], output_names=['logits'],
+            dynamic_axes={'directmap': {0: 'batch'}, 'logits': {0: 'batch'}},
+            opset_version=17, dynamo=True,
+        )
+    except Exception as e:
+        print(f"Dynamo exporter unavailable ({type(e).__name__}); using legacy exporter.")
+        torch.onnx.export(
+            model, dummy, onnx_path,
+            input_names=['directmap'], output_names=['logits'],
+            dynamic_axes={'directmap': {0: 'batch'}, 'logits': {0: 'batch'}},
+            opset_version=17,
+        )
     print(f"Exported ONNX -> {onnx_path}")
 
     classes_path = onnx_path.replace('.onnx', '.classes.json')

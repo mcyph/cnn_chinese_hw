@@ -87,13 +87,16 @@ python -m cnn_chinese_hw.recognizer.train --epochs 200 --batch-size 384 --worker
 The first run parses the stroke trajectories and caches them to
 `data/stroke_cache.pkl` (subsequent runs reuse it). The best checkpoint by
 **top-k** validation accuracy is saved to `data/hw_model.pt` and contains the
-weights, the model/data config, and the class list — everything the recognizer
-needs. Training uses class-balanced sampling, an EMA of the weights (with
-warm-up), and reports both top-1 and top-k each epoch.
+weights, the model/data config, the class list and a fitted calibration
+temperature — everything the recognizer needs. Training uses class-balanced
+sampling, GRN blocks, an EMA of the weights (with warm-up), reports both top-1
+and top-k each epoch, and finishes by temperature-scaling the candidate scores
+on the validation set so the reported confidences are well calibrated.
 
-Optional modern-recipe regularisers (Mixup/CutMix) are implemented but off by
-default; enable them for a full run by setting `TrainConfig.mixup_alpha` (try
-`0.1`) and `cutmix_alpha` (try `1.0`) in `recognizer/config.py`.
+Optional modern-recipe regularisers are implemented but off by default:
+Mixup/CutMix (set `TrainConfig.mixup_alpha`≈`0.1`, `cutmix_alpha`≈`1.0`) and
+Sharpness-Aware Minimization (`--sam`), which targets the small-data / many-class
+regime by seeking flat minima.
 
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) §7 for the roadmap toward
 compositional / zero-shot recognition (recognising characters unseen in

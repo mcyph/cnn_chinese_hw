@@ -46,6 +46,9 @@ class HandwritingRecognizer:
         self.model.load_state_dict(state or ckpt['model_state'])
         self.model.eval()
 
+        # Post-hoc calibration temperature (Guo et al., ICML 2017); 1.0 = none.
+        self.temperature = float(ckpt.get('temperature', 1.0)) or 1.0
+
         # Inference is single-instance and may be called from request threads.
         self.lock = threading.Lock()
 
@@ -78,7 +81,7 @@ class HandwritingRecognizer:
 
         with self.lock:
             logits = self.model(x)
-        probs = F.softmax(logits, dim=1).mean(dim=0)
+        probs = F.softmax(logits / self.temperature, dim=1).mean(dim=0)
 
         n = min(n_cands, probs.numel())
         scores, idx = torch.topk(probs, n)

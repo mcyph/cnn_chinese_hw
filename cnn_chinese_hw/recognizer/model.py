@@ -14,7 +14,9 @@ Design rationale (full discussion and citations in docs/ARCHITECTURE.md):
   (Hu, Shen & Sun, "Squeeze-and-Excitation Networks", CVPR 2018) and a few
   ConvNeXt-era micro-design choices -- GELU activations and a single
   normalisation/activation per residual function (Liu et al., "A ConvNet for
-  the 2020s", CVPR 2022, arXiv:2201.03545).
+  the 2020s", CVPR 2022, arXiv:2201.03545) -- plus Global Response Normalization
+  to counter channel feature collapse (Woo et al., "ConvNeXt V2", CVPR 2023,
+  arXiv:2301.00808).
 
 * The huge flatten + 1024/512 fully-connected head of the original Keras model
   is replaced by global average pooling, which removes the vast majority of the
@@ -72,6 +74,27 @@ class BlurPool2d(nn.Module):
         return F.conv2d(x, self.kernel, stride=self.stride, groups=self.channels)
 
 
+class GRN(nn.Module):
+    """Global Response Normalization (Woo et al., "ConvNeXt V2", CVPR 2023,
+    arXiv:2301.00808). Normalises each channel by its global (spatial) L2 norm
+    relative to the mean across channels, then calibrates. This increases
+    inter-channel competition and counters the feature-collapse / redundant-
+    activation behaviour of plain ConvNets. With ``gamma``/``beta`` initialised
+    to zero the layer is the identity at start of training, so it is safe to
+    enable by default."""
+
+    def __init__(self, channels, eps=1e-6):
+        super().__init__()
+        self.gamma = nn.Parameter(torch.zeros(1, channels, 1, 1))
+        self.beta = nn.Parameter(torch.zeros(1, channels, 1, 1))
+        self.eps = eps
+
+    def forward(self, x):
+        gx = torch.norm(x, p=2, dim=(2, 3), keepdim=True)        # (N, C, 1, 1)
+        nx = gx / (gx.mean(dim=1, keepdim=True) + self.eps)      # channel competition
+        return self.gamma * (x * nx) + self.beta + x
+
+
 class SqueezeExcite(nn.Module):
     """Channel attention (Hu et al., CVPR 2018)."""
 
@@ -116,11 +139,12 @@ class SEResidualBlock(nn.Module):
     """
 
     def __init__(self, in_ch, out_ch, stride=1, se_reduction=8, drop_path=0.0,
-                 anti_alias=True, blur_filt_size=3):
+                 anti_alias=True, blur_filt_size=3, use_grn=True):
         super().__init__()
         self.act = nn.GELU()
         self.bn1 = nn.BatchNorm2d(in_ch)
         self.bn2 = nn.BatchNorm2d(out_ch)
+        self.grn = GRN(out_ch) if use_grn else nn.Identity()
         self.se = SqueezeExcite(out_ch, se_reduction)
         self.drop_path = DropPath(drop_path)
 
@@ -152,6 +176,7 @@ class SEResidualBlock(nn.Module):
             identity = self.aa_short(self.shortcut(out))
         out = self.aa_main(self.conv1(out))
         out = self.conv2(self.act(self.bn2(out)))
+        out = self.grn(out)
         out = self.se(out)
         return identity + self.drop_path(out)
 
@@ -187,6 +212,7 @@ class DirectMapSENet(nn.Module):
                     drop_path=dpr[block_idx],
                     anti_alias=cfg.anti_alias,
                     blur_filt_size=cfg.blur_filt_size,
+                    use_grn=cfg.use_grn,
                 ))
                 in_ch = out_ch
                 block_idx += 1

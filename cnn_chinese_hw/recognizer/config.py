@@ -71,6 +71,9 @@ class ModelConfig:
     # ICML 2019).
     anti_alias: bool = True
     blur_filt_size: int = 3
+    # Global Response Normalization in each block (ConvNeXt V2, Woo et al.,
+    # CVPR 2023). Identity at initialisation, so safe to leave on.
+    use_grn: bool = True
     num_classes: int = 0            # filled in at train time from the data
 
 
@@ -103,6 +106,13 @@ class TrainConfig:
     mixup_alpha: float = 0.0        # Beta(a, a); Zhang et al., ICLR 2018
     cutmix_alpha: float = 0.0       # Beta(a, a); Yun et al., ICCV 2019
     mix_prob: float = 0.5           # chance a batch is mixed when enabled
+    # Sharpness-Aware Minimization (Foret et al., ICLR 2021). Seeks flat minima
+    # for better generalisation -- valuable in this small-data / many-class
+    # regime -- at the cost of a second forward/backward per step, so opt-in.
+    # AMP is disabled automatically when SAM is on.
+    sam: bool = False
+    sam_rho: float = 0.05
+    sam_adaptive: bool = False      # ASAM variant (Kwon et al., ICML 2021)
     # An IME presents a *candidate list*, so top-k accuracy is the metric we
     # select/early-stop on, not top-1 (top-k convention: Russakovsky et al.,
     # "ImageNet Large Scale Visual Recognition Challenge", IJCV 2015).

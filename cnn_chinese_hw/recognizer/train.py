@@ -38,6 +38,8 @@ from torch.utils.data import DataLoader, WeightedRandomSampler
 from cnn_chinese_hw.recognizer import config
 from cnn_chinese_hw.recognizer.dataset import build_datasets
 from cnn_chinese_hw.recognizer.model import build_model
+from cnn_chinese_hw.recognizer.sam import (
+    SAM, disable_running_stats, enable_running_stats)
 
 
 def seed_everything(seed: int):
@@ -172,8 +174,51 @@ def save_checkpoint(path, model, ema, store, model_cfg, data_cfg,
         'val_acc': val_top1,
         'val_topk': val_topk,
         'epoch': epoch,
+        'temperature': 1.0,   # replaced by post-hoc calibration after training
         'format': 1,
     }, path)
+
+
+def calibrate_checkpoint(path, val_loader, device):
+    """Post-hoc temperature scaling (Guo et al., "On Calibration of Modern
+    Neural Networks", ICML 2017, arXiv:1706.04599). Fits a single scalar T that
+    divides the logits to make the softmax scores reflect true correctness
+    likelihood -- important because an IME surfaces the candidate *scores*.
+    Accuracy is unchanged; only the confidences are recalibrated. The fitted T
+    is written back into the checkpoint."""
+    import os
+    if not os.path.exists(path):
+        return
+    ckpt = torch.load(path, map_location=device, weights_only=True)
+    model = build_model(config.ModelConfig(**ckpt['model_cfg'])).to(device)
+    model.load_state_dict(ckpt.get('ema_state') or ckpt['model_state'])
+    model.eval()
+
+    logits_all, labels_all = [], []
+    with torch.no_grad():
+        for x, y in val_loader:
+            logits_all.append(model(x.to(device)).float().cpu())
+            labels_all.append(y)
+    if not logits_all:
+        return
+    logits = torch.cat(logits_all)
+    labels = torch.cat(labels_all)
+
+    T = torch.nn.Parameter(torch.ones(1))
+    optimizer = torch.optim.LBFGS([T], lr=0.01, max_iter=100)
+    nll = torch.nn.CrossEntropyLoss()
+
+    def closure():
+        optimizer.zero_grad()
+        loss = nll(logits / T.clamp_min(1e-3), labels)
+        loss.backward()
+        return loss
+
+    optimizer.step(closure)
+    t = float(T.detach().clamp_min(1e-3))
+    ckpt['temperature'] = t
+    torch.save(ckpt, path)
+    print(f"Calibration: fitted temperature T={t:.3f}; updated checkpoint.")
 
 
 def train(data_cfg, model_cfg, train_cfg, cache=True):
@@ -208,14 +253,27 @@ def train(data_cfg, model_cfg, train_cfg, cache=True):
     print(f"Model: {model.num_parameters() / 1e6:.2f}M params, "
           f"{model_cfg.num_classes} classes")
 
-    optimizer = torch.optim.AdamW(
-        model.parameters(), lr=train_cfg.lr,
-        weight_decay=train_cfg.weight_decay,
-    )
+    if train_cfg.sam:
+        optimizer = SAM(model.parameters(), torch.optim.AdamW,
+                        rho=train_cfg.sam_rho, adaptive=train_cfg.sam_adaptive,
+                        lr=train_cfg.lr, weight_decay=train_cfg.weight_decay)
+        amp_enabled = False  # SAM's two-step update is run in full precision
+        print(f"Optimizer: SAM(AdamW) rho={train_cfg.sam_rho} "
+              f"adaptive={train_cfg.sam_adaptive} (AMP off)")
+    else:
+        optimizer = torch.optim.AdamW(
+            model.parameters(), lr=train_cfg.lr,
+            weight_decay=train_cfg.weight_decay,
+        )
+        amp_enabled = train_cfg.amp and device == 'cuda'
+
     scheduler = make_scheduler(optimizer, train_cfg, len(train_loader))
     criterion = nn.CrossEntropyLoss(label_smoothing=train_cfg.label_smoothing)
-    scaler = torch.amp.GradScaler('cuda', enabled=train_cfg.amp and device == 'cuda')
+    scaler = torch.amp.GradScaler('cuda', enabled=amp_enabled)
     ema = ModelEMA(model, train_cfg.ema_decay, warmup=train_cfg.ema_warmup)
+
+    def mixed_loss(out, y_a, y_b, lam):
+        return lam * criterion(out, y_a) + (1 - lam) * criterion(out, y_b)
 
     best_topk = 0.0
     epochs_no_improve = 0
@@ -230,15 +288,29 @@ def train(data_cfg, model_cfg, train_cfg, cache=True):
 
             x, y_a, y_b, lam = mixup_cutmix(x, y, train_cfg)
 
-            optimizer.zero_grad(set_to_none=True)
-            with torch.amp.autocast('cuda', enabled=scaler.is_enabled()):
-                out = model(x)
-                loss = lam * criterion(out, y_a) + (1 - lam) * criterion(out, y_b)
-            scaler.scale(loss).backward()
-            scaler.unscale_(optimizer)
-            nn.utils.clip_grad_norm_(model.parameters(), train_cfg.grad_clip)
-            scaler.step(optimizer)
-            scaler.update()
+            if train_cfg.sam:
+                # Two passes: ascent to the worst-case nearby point, then the
+                # real descent step computed there (Foret et al., ICLR 2021).
+                enable_running_stats(model)
+                loss = mixed_loss(model(x), y_a, y_b, lam)
+                loss.backward()
+                nn.utils.clip_grad_norm_(model.parameters(), train_cfg.grad_clip)
+                optimizer.first_step(zero_grad=True)
+
+                disable_running_stats(model)  # don't double-count BN stats
+                mixed_loss(model(x), y_a, y_b, lam).backward()
+                nn.utils.clip_grad_norm_(model.parameters(), train_cfg.grad_clip)
+                optimizer.second_step(zero_grad=True)
+            else:
+                optimizer.zero_grad(set_to_none=True)
+                with torch.amp.autocast('cuda', enabled=scaler.is_enabled()):
+                    loss = mixed_loss(model(x), y_a, y_b, lam)
+                scaler.scale(loss).backward()
+                scaler.unscale_(optimizer)
+                nn.utils.clip_grad_norm_(model.parameters(), train_cfg.grad_clip)
+                scaler.step(optimizer)
+                scaler.update()
+
             scheduler.step()
             ema.update(model)
             running += loss.item()
@@ -265,6 +337,9 @@ def train(data_cfg, model_cfg, train_cfg, cache=True):
                       f"(best val_top{train_cfg.topk}={best_topk:.4f})")
                 break
 
+    # Recalibrate the best checkpoint's confidence scores on the val set.
+    calibrate_checkpoint(config.CHECKPOINT_PATH, val_loader, device)
+
     print(f"Done. Best val_top{train_cfg.topk}={best_topk:.4f}. "
           f"Checkpoint: {config.CHECKPOINT_PATH}")
     return best_topk
@@ -278,6 +353,8 @@ def main():
     p.add_argument('--batch-size', type=int, default=train_cfg.batch_size)
     p.add_argument('--lr', type=float, default=train_cfg.lr)
     p.add_argument('--workers', type=int, default=data_cfg.num_workers)
+    p.add_argument('--sam', action='store_true',
+                   help="use Sharpness-Aware Minimization (slower, opt-in)")
     p.add_argument('--no-cache', action='store_true',
                    help="don't read/write the parsed-stroke cache")
     p.add_argument('--smoke', action='store_true',
@@ -287,6 +364,7 @@ def main():
     train_cfg.epochs = args.epochs
     train_cfg.batch_size = args.batch_size
     train_cfg.lr = args.lr
+    train_cfg.sam = args.sam
     data_cfg.num_workers = args.workers
 
     if args.smoke:
