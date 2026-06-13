@@ -1,0 +1,14 @@
+# Core (training + inference)
+torch>=2.1
+numpy
+svg.path
+
+# Optional: ONNX export / framework-free inference
+#   pip install -r requirements.txt && pip install onnx onnxruntime
+# onnx
+# onnxruntime
+
+# Optional: wxPython demo GUIs (cnn_chinese_hw/gui)
+# wxPython
+# matplotlib
+# pillow

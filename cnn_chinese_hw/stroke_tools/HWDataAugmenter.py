@@ -3,16 +3,18 @@ import random
 import numpy as np
 from random import randint
 from cnn_chinese_hw.stroke_tools.points_normalized import points_normalized
-from cnn_chinese_hw.stroke_tools.points_to_plot import draw_in_place, draw_faded_brensenham_lines
+from cnn_chinese_hw.stroke_tools.points_to_plot import draw_faded_brensenham_lines
 
 from cnn_chinese_hw.stroke_tools.get_vertex import get_vertex
 
 
 class HWStrokesAugmenter:
-    def __init__(self, strokes, find_vertices=False, vertice_error_scale=1.0):
-        """
+    """Turns a set of online strokes into a fixed-size multi-channel
+    "directMap"-style raster, optionally applying random geometric
+    augmentation first (rotation, scaling, displacement, point jitter and
+    radial distortion). See ``raster_strokes`` for the output format."""
 
-        """
+    def __init__(self, strokes, find_vertices=False, vertice_error_scale=1.0):
         strokes = points_normalized(
             strokes, width=1000, height=1000
         )
@@ -43,10 +45,15 @@ class HWStrokesAugmenter:
         return out_strokes
 
     def raster_strokes(self, image_size=24, do_augment=True):
-        """
+        """Render the strokes into an ``(image_size, image_size, 3)`` uint8
+        directMap. The three channels encode, respectively, the start of each
+        stroke, the end of each stroke, and the stroke order -- so that stroke
+        direction and order remain recoverable from the static image. See
+        ``points_to_plot.draw_faded_brensenham_lines`` for the channel maths.
 
-        :param raster_size:
-        :return:
+        :param image_size: side length of the square output raster
+        :param do_augment: apply random geometric augmentation first
+        :return: numpy uint8 array of shape (image_size, image_size, 3)
         """
         if do_augment:
             strokes = self.augment_strokes()
@@ -56,28 +63,9 @@ class HWStrokesAugmenter:
         # Make the points in `strokes` not exceed the rastered image size
         strokes = points_normalized(strokes, image_size - 1, image_size - 1)
 
-        # Draw using the xiaolin wu antialised line algorithm,
-        # outputting to a single-dimensional numpy array
-
-        if True:
-            r = np.zeros(shape=(image_size, image_size, 3), dtype=np.uint8)
-            draw_faded_brensenham_lines(r, strokes)
-        else:
-            a1 = np.zeros(shape=(image_size, image_size), dtype=np.uint8)
-            a2 = np.zeros(shape=(image_size, image_size), dtype=np.uint8)
-            draw_in_place(a1, strokes, reverse_direction=False)
-            draw_in_place(a2, strokes, reverse_direction=True)
-
+        r = np.zeros(shape=(image_size, image_size, 3), dtype=np.uint8)
+        draw_faded_brensenham_lines(r, strokes)
         return r
-
-    def raster_strokes_multiple_times(self, on_val=10, image_size=24):
-        a = np.zeros(shape=(image_size, image_size), dtype=np.uint8)
-
-        for x in range(255//on_val):
-            strokes = self.augment_strokes()
-            strokes = points_normalized(strokes, image_size - 1, image_size - 1)
-            draw_in_place(a, strokes)
-        return a
 
     def raster_strokes_as_pil(self, myarray=None, image_size=48):
         """

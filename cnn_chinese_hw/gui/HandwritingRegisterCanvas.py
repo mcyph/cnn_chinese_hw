@@ -1,6 +1,4 @@
-from cnn_chinese_hw.recognizer import HandwritingModel
 from cnn_chinese_hw.gui.HandwritingCanvas import HandwritingCanvas
-from cnn_chinese_hw.stroke_tools.HWDataAugmenter import HWStrokesAugmenter
 
 
 class HandwritingRegisterCanvas(HandwritingCanvas):

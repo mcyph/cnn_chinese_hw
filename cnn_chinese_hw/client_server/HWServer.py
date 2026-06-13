@@ -1,13 +1,24 @@
 from cnn_chinese_hw.client_server.rem_dupes import rem_dupes
-from cnn_chinese_hw.recognizer.TFLiteRecognizer import TFLiteRecognizer
-
-
-USE_ZINNIA = False
+from cnn_chinese_hw.recognizer.recognizer import HandwritingRecognizer
 
 
 class HWServer:
-    def __init__(self):
-        self.recognizer = TFLiteRecognizer()
+    """Thin service wrapper around :class:`HandwritingRecognizer`.
+
+    The recognizer (and its checkpoint) is loaded lazily on first use, so
+    importing this module never requires a trained model to be present -- the
+    error surfaces only when a recognition request is actually made.
+    """
+
+    def __init__(self, device='cpu'):
+        self._device = device
+        self._recognizer = None
+
+    @property
+    def recognizer(self):
+        if self._recognizer is None:
+            self._recognizer = HandwritingRecognizer(device=self._device)
+        return self._recognizer
 
     def get_chinese_written_candidates(self, strokes_list, id):
         if not strokes_list:
@@ -19,5 +30,4 @@ class HWServer:
                        in self.recognizer.get_candidates_list(strokes_list)]
 
         return_list = rem_dupes(return_list)
-        return_dict = {'cands_list': return_list, 'id': id}
-        return return_dict
+        return {'cands_list': return_list, 'id': id}

@@ -1,52 +1,45 @@
 # cnn_chinese_hw
 
-# Introduction
+A **PyTorch** convolutional neural network for recognising **online
+(stroke-based)** Chinese (Simplified/Traditional) and Japanese Kanji
+handwriting, licensed under the LGPL 2.1.
 
-A convolutional neural network using Keras for recognising Chinese 
-(Simplified/Traditional) and Japanese Kanji licensed under the LGPL 2.1. 
-An advantage over many other open-source engines is that strokes can 
-be drawn out-of-order (to an extent). 
-
-It is intended to be used as an input method, and accepts x,y coordinate 
-points of strokes as input parameters. This differs from some other
-engines which are trained to recognise Kanji/Hanzi drawn on physical 
-paper with a brush or pen.
+An advantage over many other open-source engines is that strokes can be drawn
+**out of order** (to an extent). It is intended to be used as an input method
+and accepts the `(x, y)` coordinate points of strokes as input — this differs
+from engines trained to recognise characters drawn on paper with a brush/pen.
 
 ![Recognizer Demo](docs/recogniser_demo.png)
 
-# Install
+> **Note on this version.** The recognizer was rewritten in PyTorch and the
+> architecture modernised (compact SE-ResNet with global average pooling, ~2.9M
+> parameters vs the previous >30M dense model). The TensorFlow/Keras/TFLite
+> code and weights have been removed. See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+> for the design and the research it is based on. **You must train a model**
+> (§ *Train the model* below) before recognition will work — no pre-trained
+> checkpoint ships in the repository.
 
-Type:
-
-```console
-apt install git
-pip3 install svg.path numpy
-pip3 install git+https://github.com/mcyph/cnn_chinese_hw
-```
-
-If you just want to get predictions, you don't need a full `tensorflow` install -
-you can use the instructions at https://www.tensorflow.org/lite/guide/python
-to install just the tensorflow lite runtime. This also has the advantage that
-the model can work on older processors which don't support the AVX extensions.
-
-In order to train the model however, you will need `tensorflow` at least version 2.0+.
-pip3 may need to be updated to do this.
+## Install
 
 ```console
-pip3 install --upgrade pip
-pip3 install tensorflow
+pip install -r requirements.txt
+pip install -e .
 ```
 
-There are also some demo wxPython recognizer/new stroke registry applications in
-the directory ``cnn_chinese_hw/gui``. These need wxPython, matplotlib and pillow 
-in addition.`
+This pulls in `torch`, `numpy` and `svg.path`. A CUDA-capable GPU is strongly
+recommended for training but is not required for inference. Optional extras:
 
-# Recognize characters
+```console
+pip install -e ".[onnx]"   # ONNX export / framework-free inference
+pip install -e ".[gui]"    # wxPython demo GUIs
+```
+
+## Recognize characters
 
 ```python
-from cnn_chinese_hw.recognizer.TFLiteRecognizer import TFLiteRecognizer
+from cnn_chinese_hw.recognizer.recognizer import HandwritingRecognizer
 
-rec = TFLiteRecognizer()
+rec = HandwritingRecognizer()        # loads data/hw_model.pt
 print(rec.get_candidates_list(
     [[(208, 0), (199, 119), (94, 341)],
      [(0, 461), (781, 520), (915, 520), (999, 479)],
@@ -58,68 +51,130 @@ print(rec.get_candidates_list(
 ))
 ```
 
-This should recognize `我` (the ordinal of it, 25105):
+This returns a ranked list of `(score, ordinal)` pairs (use `chr(ordinal)` for
+the character), e.g. for `我` (ordinal 25105):
 
 ```python
-[(0.99929094, 25105), (0.00034741702, 22941), (0.00023694134, 30330), ...]
+[(0.9989, 25105), (0.0004, 22941), (0.0002, 30330), ...]
 ```
 
-# Comments on Implementation
+Pass `tta=N` to average the prediction over `N` randomly-augmented renders for
+a small accuracy gain at higher latency:
+`rec.get_candidates_list(strokes, tta=8)` (default `0`, i.e. a single fast
+render).
 
-It augments the Tomoe data: distorting from the center, randomizing the points, 
-rotating the characters and strokes to a degree to increase the likelihood of 
-recognition. There are three channels - one for the start of strokes, one of 
-the end, and one which fades out towards the end, so as to make stroke order and 
-direction all criteria from which strokes are recognised. 
+The same API is also exposed as a service via
+`cnn_chinese_hw.client_server.HWServer.HWServer`, which returns
+`{'cands_list': [...characters...], 'id': ...}` and is what the wider
+application consumes.
+
+## Train the model
+
+Training renders the stroke corpora into multi-channel directMaps on the fly
+and trains the network from scratch.
+
+```console
+# Quick end-to-end pipeline check on a tiny subset (a few seconds):
+python -m cnn_chinese_hw.recognizer.train --smoke
+
+# Full training run -> writes cnn_chinese_hw/data/hw_model.pt
+python -m cnn_chinese_hw.recognizer.train
+
+# Common overrides:
+python -m cnn_chinese_hw.recognizer.train --epochs 200 --batch-size 384 --workers 12
+```
+
+The first run parses the stroke trajectories and caches them to
+`data/stroke_cache.pkl` (subsequent runs reuse it). The best checkpoint by
+**top-k** validation accuracy is saved to `data/hw_model.pt` and contains the
+weights, the model/data config, and the class list — everything the recognizer
+needs. Training uses class-balanced sampling, an EMA of the weights (with
+warm-up), and reports both top-1 and top-k each epoch.
+
+Optional modern-recipe regularisers (Mixup/CutMix) are implemented but off by
+default; enable them for a full run by setting `TrainConfig.mixup_alpha` (try
+`0.1`) and `cutmix_alpha` (try `1.0`) in `recognizer/config.py`.
+
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) §7 for the roadmap toward
+compositional / zero-shot recognition (recognising characters unseen in
+training) and richer input encodings.
+
+### Export for framework-free inference (optional)
+
+```console
+pip install onnx onnxruntime
+python -m cnn_chinese_hw.recognizer.export_onnx --quantize
+```
+
+This writes `data/hw_model.onnx` (+ an int8 graph with `--quantize`) and a
+`hw_model.classes.json` index map, runnable under `onnxruntime` with no
+TensorFlow/PyTorch dependency.
+
+## How it works (in brief)
+
+The character's online strokes are normalised, simplified to their key vertices
+and rendered into a small `48×48×3` image. The three channels separately encode
+the **start** of strokes, the **end** of strokes, and the **stroke order**, so
+that direction and order remain recoverable from a single static image — this
+is what lets the model tolerate out-of-order drawing. Light geometric
+augmentation (rotation, scale, displacement, jitter, radial distortion) is
+applied during training.
 
 > ![Augmented Strokes](docs/augmented_strokes.png)
 
-When the correct candidate isn't always the first one, it usually 
-is in the top few. Adding 
-[batch normalization](https://www.kdnuggets.com/2018/09/dropout-convolutional-networks.html) 
-to both the dense (fully connected) layers and convolutional 2d layers 
-significantly improved results.
+The image is classified by a compact residual CNN with Squeeze-and-Excitation
+channel attention, anti-aliased (shift-invariant) downsampling, and a
+global-average-pooling head. It is trained with AdamW + cosine schedule, label
+smoothing, class-balanced sampling and is selected on top-k validation accuracy
+(the metric that matters for a candidate list). The full design and the papers
+each choice draws on are documented in
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
-Because the data was drawn by only a few people, it may have trouble 
-recognising some people's handwriting, although I think it provides pretty good
-results. I have added a few hundred characters which I have drawn myself, 
-many of them with incorrect numbers of strokes/more or less curves so as to 
-increase the likelihood of the CNN being able to recognize different 
-people's handwriting, including non-native speakers. 
+Because the data was drawn by only a few people, recognition of some people's
+handwriting may be weaker; a few hundred deliberately-varied characters drawn
+by the author are mixed in to broaden coverage. The model is validated against
+the held-out KanjiVG data.
 
-It is validated against the KanjiVG data with an accuracy percentage of 
-around 94%. It's hard for me to say how well that translates to
-writing on a tablet/phone screen, or drawing with a mouse. However cursive 
-testing says it performs reasonably well, even if not as well as with 
-a wacom tablet or pen. I may later combine my previous handwriting engine that 
-on compared x,y point positions and angles, augmenting the results. 
+## Project layout
 
-# License
+```
+cnn_chinese_hw/
+  recognizer/      PyTorch model, dataset, training, inference, ONNX export
+    config.py        single source of truth for geometry + hyper-parameters
+    model.py         DirectMapSENet (SE-ResNet + GAP)
+    dataset.py       on-the-fly directMap dataset (replaces the old .npz)
+    train.py         training entry point
+    recognizer.py    inference (HandwritingRecognizer)
+    export_onnx.py   ONNX export (replaces the old TFLite path)
+  stroke_tools/    stroke normalisation, vertex extraction, rasterisation
+  parse_data/      Tomoe + KanjiVG corpus parsers
+  client_server/   HWServer service wrapper
+  gui/             wxPython demo canvases (drawing / registering samples)
+  data/            source corpora (Tomoe XML, KanjiVG, supplemental)
+docs/              architecture notes + figures
+```
 
-Because it uses [Tomoe](https://sourceforge.net/projects/tomoe/) data, 
-I have put this project and my supplemental data under the same license 
-(LGPL 2.1). Compared to the license of some other publicly 
-available Chinese handwriting datasets, the LGPL is quite permissive 
-and allows for commercial use.
+## License
 
-[KanjiVG](https://kanjivg.tagaini.net/) data is also included for 
-validation purposes. This data is not combined when recognizing due 
-it being under the Creative Commons Attribution-ShareAlike 3.0 
-license. 
+Because it uses [Tomoe](https://sourceforge.net/projects/tomoe/) data, this
+project and the supplemental data are under the same license (LGPL 2.1).
+[KanjiVG](https://kanjivg.tagaini.net/) data is included **for validation only**
+and is not combined when recognizing, as it is under CC BY-SA 3.0.
 
+```
+Copyright (C) 2020  Dave Morrissey
 
-    Copyright (C) 2020  Dave Morrissey
-    
-    This library is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License 2.1 as published by the Free Software Foundation.
-    
-    This library is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
-    
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
-    USA
+This library is free software; you can redistribute it and/or
+modify it under the terms of the GNU Lesser General Public
+License 2.1 as published by the Free Software Foundation.
+
+This library is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+Lesser General Public License for more details.
+
+You should have received a copy of the GNU Lesser General Public
+License along with this library; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
+USA
+```

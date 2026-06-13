@@ -127,3 +127,12 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# cnn_chinese_hw: generated ML artifacts
+# (trained checkpoints hw_model.pt may be committed when ready; these are caches)
+cnn_chinese_hw/data/stroke_cache*.pkl
+cnn_chinese_hw/data/*.hdf5
+cnn_chinese_hw/data/*.npz
+cnn_chinese_hw/data/*.onnx
+cnn_chinese_hw/data/*.tflite
+cnn_chinese_hw/data/hw_model.classes.json

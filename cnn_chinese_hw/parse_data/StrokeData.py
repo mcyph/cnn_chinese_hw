@@ -15,7 +15,7 @@ class StrokeData:
             'zh': self.get_stroke_data(
                 f'{get_package_dir()}/data/handwriting-zh_CN.xml'
             ),
-            'zh-Hant': self.get_stroke_data(
+            'zh-TW': self.get_stroke_data(
                 f'{get_package_dir()}/data/handwriting-zh_TW.xml'
             )
         }

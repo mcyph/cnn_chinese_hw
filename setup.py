@@ -13,10 +13,12 @@ with open(join(here, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name='cnn_chinese_hw',
-    version='0.1.1',
-    description='A convolutional neural network using Keras for recognising '
-                'Chinese (Simplified/Traditional) and Japanese Kanji',
+    version='0.2.0',
+    description='A PyTorch convolutional neural network for recognising '
+                'online (stroke-based) Chinese (Simplified/Traditional) and '
+                'Japanese Kanji handwriting',
     long_description=long_description,
+    long_description_content_type='text/markdown',
     url='https://github.com/mcyph/cnn_chinese_hw',
     author='Dave Morrissey',
     author_email='20507948+mcyph@users.noreply.github.com',
@@ -33,19 +35,28 @@ setup(
         'Natural Language :: Japanese',
 
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
-        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
+        'Programming Language :: Python :: 3.12',
     ],
 
-    keywords='input ime handwriting cnn keras kanji hanzi chinese',
+    keywords='input ime handwriting cnn pytorch kanji hanzi chinese',
     packages=find_packages(),
+    python_requires='>=3.9',
     install_requires=[
         'svg.path',
         'numpy',
+        'torch>=2.1',
     ],
-    package_data = {
-        '': ['*.xml', '*.txt', '*.tflite', '*.json'],
+    extras_require={
+        # Only needed to export/run the optional ONNX inference graph.
+        'onnx': ['onnx', 'onnxruntime'],
+        # Only needed for the wxPython demo GUIs.
+        'gui': ['wxPython', 'matplotlib', 'pillow'],
+    },
+    package_data={
+        '': ['*.xml', '*.txt', '*.json', '*.pt'],
     },
     include_package_data=True,
     zip_safe=False
