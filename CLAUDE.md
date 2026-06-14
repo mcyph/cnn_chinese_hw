@@ -58,3 +58,10 @@ has `torch` (CUDA) installed.
 
 - **Local import**: add the submodule root to `PYTHONPATH` when importing from
   external components (e.g. `dicts_api`).
+
+## Keep this file current
+
+When a change adds, renames, moves, or deprecates a public API (`HandwritingRecognizer`,
+`HWServer`, `StrokeData`), a config constant, or a data source covered here, update
+this file in the same change. Record only durable, reuse-relevant facts; keep it
+terse — no changelogs or one-off detail. See the root `CLAUDE.md` for the convention.
