@@ -11,10 +11,19 @@ This keeps the on-disk footprint tiny, lets each epoch see fresh augmentation,
 and scales the number of augmented "virtual copies" with ``num_workers`` rather
 than with RAM.
 
-Training data: the author's supplemental hand-drawn samples + the Tomoe
-handwriting corpus (zh / zh-TW / ja), de-duplicated across languages.
-Validation data: KanjiVG, restricted to classes that exist in the training set
-(kept strictly separate, exactly as in the original project).
+Which corpora are used is driven by ``DataConfig.license_group`` (see
+``config.LICENSE_GROUPS``). To avoid co-mingling incompatibly-licensed data in
+one set of weights, each group trains on mutually-compatible corpora and
+validates on a held-out corpus from the *other* group:
+
+* ``permissive`` -> trains on author + Tomoe (LGPL 2.1) + Make Me a Hanzi
+  (Arphic PL); validates on held-out KanjiVG.
+* ``ccbysa``     -> trains on author + KanjiVG (CC BY-SA 3.0); validates on
+  held-out Tomoe.
+
+The validation corpus is used only for early-stopping / calibration and never
+enters the weights, so the permissive model's weights stay free of CC BY-SA. The
+two models are combined at inference time (see ``recognizer.py``).
 """
 
 import os
@@ -28,6 +37,9 @@ from torch.utils.data import Dataset
 from cnn_chinese_hw.recognizer import config
 from cnn_chinese_hw.parse_data.StrokeData import StrokeData
 from cnn_chinese_hw.parse_data.iter_kanjivg_data import iter_kanjivg_data
+from cnn_chinese_hw.parse_data.iter_makemeahanzi_data import (
+    iter_makemeahanzi_data,
+)
 from cnn_chinese_hw.stroke_tools.HWDataAugmenter import HWStrokesAugmenter
 from cnn_chinese_hw.stroke_tools.get_vertex import get_vertex
 from cnn_chinese_hw.stroke_tools.points_normalized import points_normalized
@@ -73,7 +85,7 @@ class StrokeStore:
         self.classes = []
         self._ord_to_label = {}
 
-        cache_path = config.STROKE_CACHE_PATH
+        cache_path = config.stroke_cache_path_for(data_cfg.license_group)
         if data_cfg.small_sample_only:
             cache_path = cache_path.replace('.pkl', '_sample.pkl')
 
@@ -125,50 +137,97 @@ class StrokeStore:
         return self._ord_to_label[ord_]
 
     def _build(self):
-        print("Parsing stroke trajectories (first run; this is cached)...")
-        self.train_samples = list(self._iter_train_samples())
-        # Class list is now fixed; validation may only reference existing ones.
-        self.val_samples = list(self._iter_val_samples())
+        group = config.LICENSE_GROUPS[self.cfg.license_group]
+        print(f"Parsing stroke trajectories for license group "
+              f"'{self.cfg.license_group}' (train={group['train']}, "
+              f"val={group['val']}; first run, cached)...")
+
+        # Training: pool the group's compatible corpora (classes may be added).
+        self.train_samples = list(self._iter_train_samples(group['train']))
+        # Validation: the *other* group's held-out corpus, restricted to classes
+        # that exist in training. It never enters the weights.
+        self.val_samples = list(self._iter_val_samples(group['val']))
+
         print(f"  classes={self.num_classes} "
               f"train={len(self.train_samples)} val={len(self.val_samples)}")
 
-    def _iter_train_samples(self):
-        cfg = self.cfg
-
-        # 1) The author's supplemental hand-drawn characters.
+    # -- per-corpus emitters --------------------------------------------------
+    # Each yields (ordinal, drawings, find_vertices) where ``drawings`` is a list
+    # of one-or-more drawings of that character, a drawing being [[(x, y), ...]].
+    def _emit_author(self):
         register = HandwritingRegister()
         for ord_, strokes_list in register.get_D_strokes().items():
-            label = self._label_for(ord_, allow_new=True)
+            drawings = []
             for strokes in strokes_list:
                 strokes = points_normalized(strokes)
-                strokes = [get_vertex(s) for s in strokes]
-                yield (label, strokes, False)
+                drawings.append([get_vertex(s) for s in strokes])
+            yield ord_, drawings, False
 
-        # 2) The Tomoe corpus (zh / zh-TW / ja), de-duplicated across scripts.
+    def _emit_tomoe(self):
+        # zh / zh-TW / ja, de-duplicated across scripts via rounded geometry.
         stroke_data = StrokeData()
         seen = set()
-        for idx, (ord_, strokes_list) in enumerate(stroke_data.iter()):
-            if (cfg.small_sample_only
-                    and ord_ not in _ALWAYS_ADD
-                    and idx > cfg.small_sample_size):
-                continue
-
+        for ord_, strokes_list in stroke_data.iter():
             key = _stroke_key(ord_, strokes_list)
             if key in seen:
                 continue
             seen.add(key)
+            drawings = [[s.LPoints for s in variant] for variant in strokes_list]
+            yield ord_, drawings, False
 
-            label = self._label_for(ord_, allow_new=True)
-            for i_strokes in strokes_list:
-                strokes = [s.LPoints for s in i_strokes]
-                yield (label, strokes, False)
+    def _emit_makemeahanzi(self):
+        # Arphic Public License; one synthetic stroke-median exemplar per char.
+        try:
+            it = iter_makemeahanzi_data()
+        except FileNotFoundError as e:
+            print(f"  [makemeahanzi] skipped: {e}")
+            return
+        for ord_, strokes_list in it:
+            # Medians are sparse centre-lines already -> normalise, no re-vertex.
+            yield ord_, [points_normalized(strokes_list)], False
 
-    def _iter_val_samples(self):
+    def _emit_kanjivg(self):
+        # CC BY-SA. Bezier control points -> find_vertices=True at render time.
         for ord_, strokes in iter_kanjivg_data():
+            yield ord_, [strokes], True
+
+    def _emit_corpus(self, corpus):
+        emit = {
+            'author': self._emit_author,
+            'tomoe': self._emit_tomoe,
+            'makemeahanzi': self._emit_makemeahanzi,
+            'kanjivg': self._emit_kanjivg,
+        }[corpus]
+        return emit()
+
+    # -- sample iteration -----------------------------------------------------
+    def _iter_train_samples(self, corpora):
+        cfg = self.cfg
+        for corpus in corpora:
+            if corpus == 'makemeahanzi' and not cfg.use_makemeahanzi:
+                continue
+            # The author corpus is small and always kept in full; the large
+            # corpora are truncated in smoke-test mode.
+            truncate = corpus != 'author'
+            for idx, (ord_, drawings, fv) in enumerate(self._emit_corpus(corpus)):
+                if (truncate and cfg.small_sample_only
+                        and ord_ not in _ALWAYS_ADD
+                        and idx > cfg.small_sample_size):
+                    continue
+                label = self._label_for(ord_, allow_new=True)
+                for strokes in drawings:
+                    yield (label, strokes, fv)
+
+    def _iter_val_samples(self, corpus):
+        # Held-out corpus, restricted to classes that exist in training so the
+        # label space matches the model's output (chars unseen in training are
+        # skipped, exactly as in the original project).
+        for ord_, drawings, fv in self._emit_corpus(corpus):
             label = self._label_for(ord_, allow_new=False)
             if label is None:
-                continue  # char not in training set -> skip (as in original)
-            yield (label, strokes, True)
+                continue
+            for strokes in drawings:
+                yield (label, strokes, fv)
 
 
 class DirectMapDataset(Dataset):

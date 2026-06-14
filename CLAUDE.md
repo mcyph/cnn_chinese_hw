@@ -23,7 +23,15 @@ citations.
   trained checkpoint.
 - **`cnn_chinese_hw/stroke_tools/`**: Stroke normalisation, vertex extraction
   and rasterisation (framework-agnostic numpy).
-- **`cnn_chinese_hw/parse_data/`**: Tomoe and KanjiVG corpus parsers.
+- **`cnn_chinese_hw/parse_data/`**: Tomoe, KanjiVG and Make Me a Hanzi corpus
+  parsers. The corpora are license-incompatible (LGPL 2.1 / Arphic PL / CC
+  BY-SA), so they are **not** mixed in one model: each `DataConfig.license_group`
+  (`config.LICENSE_GROUPS`) trains its own checkpoint — `permissive` (author +
+  Tomoe + Make Me a Hanzi, val on held-out KanjiVG) and `ccbysa` (author +
+  KanjiVG, val on held-out Tomoe). `recognizer.py` ensembles whatever
+  `hw_model.<group>.pt` checkpoints exist by summing calibrated probabilities.
+  Train via `train.py --license-group {permissive,ccbysa}`. Licensing/attribution
+  rationale: `THIRD_PARTY_DATA.md`.
 - **`cnn_chinese_hw/gui/`**: wxPython demo canvases.
 
 ## Development & Usage

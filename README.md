@@ -39,7 +39,7 @@ pip install -e ".[gui]"    # wxPython demo GUIs
 ```python
 from cnn_chinese_hw.recognizer.recognizer import HandwritingRecognizer
 
-rec = HandwritingRecognizer()        # loads data/hw_model.pt
+rec = HandwritingRecognizer()        # loads + ensembles available hw_model.*.pt
 print(rec.get_candidates_list(
     [[(208, 0), (199, 119), (94, 341)],
      [(0, 461), (781, 520), (915, 520), (999, 479)],
@@ -77,18 +77,24 @@ and trains the network from scratch.
 # Quick end-to-end pipeline check on a tiny subset (a few seconds):
 python -m cnn_chinese_hw.recognizer.train --smoke
 
-# Full training run -> writes cnn_chinese_hw/data/hw_model.pt
-python -m cnn_chinese_hw.recognizer.train
+# Train the two license-separated models (each writes its own checkpoint):
+python -m cnn_chinese_hw.recognizer.train --license-group permissive   # -> hw_model.permissive.pt
+python -m cnn_chinese_hw.recognizer.train --license-group ccbysa       # -> hw_model.ccbysa.pt
 
 # Common overrides:
-python -m cnn_chinese_hw.recognizer.train --epochs 200 --batch-size 384 --workers 12
+python -m cnn_chinese_hw.recognizer.train --license-group permissive --epochs 200 --batch-size 384
 ```
 
+The recognizer loads and ensembles whichever `hw_model.<group>.pt` checkpoints
+exist (falling back to a legacy single `hw_model.pt`). Train only `permissive`
+if you want commercially-clean, share-alike-free weights.
+
 The first run parses the stroke trajectories and caches them to
-`data/stroke_cache.pkl` (subsequent runs reuse it). The best checkpoint by
-**top-k** validation accuracy is saved to `data/hw_model.pt` and contains the
-weights, the model/data config, the class list and a fitted calibration
-temperature — everything the recognizer needs. Training uses class-balanced
+`data/stroke_cache.<group>.pkl` (subsequent runs reuse it). The best checkpoint
+by **top-k** validation accuracy is saved to `data/hw_model.<group>.pt` and
+contains the weights, the model/data config, the class list and a fitted
+calibration temperature — everything the recognizer needs. Training uses
+class-balanced
 sampling, GRN blocks, an EMA of the weights (with warm-up), reports both top-1
 and top-k each epoch, and finishes by temperature-scaling the candidate scores
 on the validation set so the reported confidences are well calibrated.
@@ -135,8 +141,20 @@ each choice draws on are documented in
 
 Because the data was drawn by only a few people, recognition of some people's
 handwriting may be weaker; a few hundred deliberately-varied characters drawn
-by the author are mixed in to broaden coverage. The model is validated against
-the held-out KanjiVG data.
+by the author are mixed in to broaden coverage. The
+[Make Me a Hanzi](https://github.com/skishore/makemeahanzi) stroke-median corpus
+(~9.5k characters, Arphic Public License) is also mixed in as an extra training
+source to widen character coverage — toggle it with `DataConfig.use_makemeahanzi`.
+
+Because the corpora carry mutually copyleft-incompatible licenses (CC BY-SA,
+LGPL, Arphic PL), they are **not co-mingled in one model**. Instead each
+*license group* (`DataConfig.license_group`) trains its own checkpoint —
+`permissive` (Tomoe + Make Me a Hanzi, validated on held-out KanjiVG) and
+`ccbysa` (KanjiVG, validated on held-out Tomoe) — and the recognizer combines
+whichever checkpoints are present at inference (summed calibrated
+probabilities). This keeps the share-alike KanjiVG data out of the permissive
+model's weights; see [`THIRD_PARTY_DATA.md`](THIRD_PARTY_DATA.md) and the License
+section.
 
 ## Project layout
 
@@ -150,10 +168,10 @@ cnn_chinese_hw/
     recognizer.py    inference (HandwritingRecognizer)
     export_onnx.py   ONNX export (replaces the old TFLite path)
   stroke_tools/    stroke normalisation, vertex extraction, rasterisation
-  parse_data/      Tomoe + KanjiVG corpus parsers
+  parse_data/      Tomoe + KanjiVG + Make Me a Hanzi corpus parsers
   client_server/   HWServer service wrapper
   gui/             wxPython demo canvases (drawing / registering samples)
-  data/            source corpora (Tomoe XML, KanjiVG, supplemental)
+  data/            source corpora (Tomoe XML, KanjiVG, Make Me a Hanzi, supplemental)
 docs/              architecture notes + figures
 ```
 
@@ -161,11 +179,18 @@ docs/              architecture notes + figures
 
 Because it uses [Tomoe](https://sourceforge.net/projects/tomoe/) data, this
 project and the supplemental data are under the same license (LGPL 2.1).
-[KanjiVG](https://kanjivg.tagaini.net/) data is included **for validation only**
-and is not combined when recognizing, as it is under CC BY-SA 3.0.
+[Make Me a Hanzi](https://github.com/skishore/makemeahanzi) `graphics.txt` is a
+training source for the `permissive` model under the **Arphic Public License**
+(commercial use permitted; not GPL). [KanjiVG](https://kanjivg.tagaini.net/)
+(CC BY-SA 3.0) trains only the **separate** `ccbysa` model, so those weights are
+CC BY-SA while the `permissive` model's weights stay free of share-alike. The
+licenses never co-mingle in one weight file — they meet only as combined outputs
+at inference. Ship whichever models your licensing allows. All third-party
+corpora, their licenses and required attributions are documented in
+[`THIRD_PARTY_DATA.md`](THIRD_PARTY_DATA.md).
 
 ```
-Copyright (C) 2020  Dave Morrissey
+Copyright (C) 2020-2026 Dave Morrissey
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Lesser General Public

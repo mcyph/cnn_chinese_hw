@@ -24,22 +24,20 @@ Training recipe (see docs/ARCHITECTURE.md for citations):
   * early stopping on validation accuracy
 """
 
-import argparse
-import copy
 import math
-import random
+import copy
 import time
-
-import numpy as np
 import torch
+import random
+import argparse
+import numpy as np
 import torch.nn as nn
 from torch.utils.data import DataLoader, WeightedRandomSampler
 
 from cnn_chinese_hw.recognizer import config
-from cnn_chinese_hw.recognizer.dataset import build_datasets
 from cnn_chinese_hw.recognizer.model import build_model
-from cnn_chinese_hw.recognizer.sam import (
-    SAM, disable_running_stats, enable_running_stats)
+from cnn_chinese_hw.recognizer.dataset import build_datasets
+from cnn_chinese_hw.recognizer.sam import SAM, disable_running_stats, enable_running_stats
 
 
 def seed_everything(seed: int):
@@ -227,6 +225,7 @@ def train(data_cfg, model_cfg, train_cfg, cache=True):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     print(f"Device: {device}")
 
+    ckpt_path = config.checkpoint_path_for(data_cfg.license_group)
     store, train_ds, val_ds = build_datasets(data_cfg, cache=cache)
     model_cfg.num_classes = store.num_classes
 
@@ -327,7 +326,7 @@ def train(data_cfg, model_cfg, train_cfg, cache=True):
         if val_topk > best_topk:
             best_topk = val_topk
             epochs_no_improve = 0
-            save_checkpoint(config.CHECKPOINT_PATH, model, ema, store,
+            save_checkpoint(ckpt_path, model, ema, store,
                             model_cfg, data_cfg, val_top1, val_topk, epoch)
             print(f"  -> saved checkpoint (val_top{train_cfg.topk}={val_topk:.4f})")
         else:
@@ -338,10 +337,10 @@ def train(data_cfg, model_cfg, train_cfg, cache=True):
                 break
 
     # Recalibrate the best checkpoint's confidence scores on the val set.
-    calibrate_checkpoint(config.CHECKPOINT_PATH, val_loader, device)
+    calibrate_checkpoint(ckpt_path, val_loader, device)
 
     print(f"Done. Best val_top{train_cfg.topk}={best_topk:.4f}. "
-          f"Checkpoint: {config.CHECKPOINT_PATH}")
+          f"Checkpoint: {ckpt_path}")
     return best_topk
 
 
@@ -353,6 +352,10 @@ def main():
     p.add_argument('--batch-size', type=int, default=train_cfg.batch_size)
     p.add_argument('--lr', type=float, default=train_cfg.lr)
     p.add_argument('--workers', type=int, default=data_cfg.num_workers)
+    p.add_argument('--license-group', choices=list(config.LICENSE_GROUPS),
+                   default=data_cfg.license_group,
+                   help="which license group to train into its own checkpoint "
+                        "(permissive = Tomoe+MakeMeAHanzi; ccbysa = KanjiVG)")
     p.add_argument('--sam', action='store_true',
                    help="use Sharpness-Aware Minimization (slower, opt-in)")
     p.add_argument('--no-cache', action='store_true',
@@ -366,6 +369,7 @@ def main():
     train_cfg.lr = args.lr
     train_cfg.sam = args.sam
     data_cfg.num_workers = args.workers
+    data_cfg.license_group = args.license_group
 
     if args.smoke:
         data_cfg.small_sample_only = True

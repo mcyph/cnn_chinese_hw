@@ -14,14 +14,13 @@ onnxruntime-only deployment can map output indices back to ordinals without
 importing this package.
 """
 
-import argparse
 import json
-
 import torch
+import argparse
 
 from cnn_chinese_hw.recognizer import config
-from cnn_chinese_hw.recognizer.config import DataConfig, ModelConfig
 from cnn_chinese_hw.recognizer.model import build_model
+from cnn_chinese_hw.recognizer.config import DataConfig, ModelConfig
 
 
 def export(checkpoint_path=None, onnx_path=None, use_ema=True, quantize=False):
@@ -76,8 +75,15 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--quantize', action='store_true', help="also emit an int8 graph")
     p.add_argument('--no-ema', action='store_true', help="export raw (non-EMA) weights")
+    p.add_argument('--license-group', choices=list(config.LICENSE_GROUPS), default=None,
+                   help="export this group's checkpoint (default: legacy hw_model.pt)")
     args = p.parse_args()
-    export(use_ema=not args.no_ema, quantize=args.quantize)
+    ckpt_path = (config.checkpoint_path_for(args.license_group)
+                 if args.license_group else None)
+    onnx_path = (config.ONNX_PATH.replace('.onnx', f'.{args.license_group}.onnx')
+                 if args.license_group else None)
+    export(checkpoint_path=ckpt_path, onnx_path=onnx_path,
+           use_ema=not args.no_ema, quantize=args.quantize)
 
 
 if __name__ == '__main__':

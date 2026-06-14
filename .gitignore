@@ -136,3 +136,7 @@ cnn_chinese_hw/data/*.npz
 cnn_chinese_hw/data/*.onnx
 cnn_chinese_hw/data/*.tflite
 cnn_chinese_hw/data/hw_model.classes.json
+# Make Me a Hanzi bulk data (~30 MB, Arphic Public License). Fetch on demand with
+# `python -m cnn_chinese_hw.parse_data.iter_makemeahanzi_data --download`.
+# The license/attribution files in that directory ARE tracked (see !... below).
+cnn_chinese_hw/data/makemeahanzi/graphics.txt
