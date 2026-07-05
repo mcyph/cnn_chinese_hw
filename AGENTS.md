@@ -64,4 +64,4 @@ has `torch` (CUDA) installed.
 When a change adds, renames, moves, or deprecates a public API (`HandwritingRecognizer`,
 `HWServer`, `StrokeData`), a config constant, or a data source covered here, update
 this file in the same change. Record only durable, reuse-relevant facts; keep it
-terse — no changelogs or one-off detail. See the root `CLAUDE.md` for the convention.
+terse — no changelogs or one-off detail. See the root `AGENTS.md` for the convention.
