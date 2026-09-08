@@ -7,6 +7,16 @@ TensorFlow/Keras/TFLite have been fully removed; see
 [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) for the design and its research
 citations.
 
+## Capability → canonical entrypoint
+
+| Capability | Canonical entrypoint |
+|---|---|
+| Calibrated ensemble candidates | `recognizer.recognizer.HandwritingRecognizer.get_candidates_list` |
+| Native per-checkpoint logits, vocabularies and calibration metadata | `HandwritingRecognizer.infer_logits`; shared Pydantic evidence and load-time fingerprints from `iso_tools.inference` (available on the monorepo `PYTHONPATH`) |
+| Import-light native probability ensemble and compact diagnostic evidence | `recognizer.evidence.project_handwriting`; checkpoint temperatures preserve existing ensemble semantics, missing classes are explicit and probabilities are not writer-calibrated correctness |
+| Separate checkpoint selection, temperature fitting and corpus testing | `recognizer.calibration.split_calibration_samples`, using `iso_tools.stt.evaluation.partitions`; protects held-out character variants/rounded geometry and excludes exact training duplicates; writer/device identities remain unavailable |
+| Lazy service wrapper | `client_server.HWServer` |
+
 ## Project Structure
 
 - **`cnn_chinese_hw/recognizer/`**: All neural-network code.

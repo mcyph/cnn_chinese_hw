@@ -186,3 +186,15 @@ def test_missing_checkpoint_raises():
     from cnn_chinese_hw.recognizer.recognizer import HandwritingRecognizer
     with pytest.raises(FileNotFoundError):
         HandwritingRecognizer(checkpoint_path="/nonexistent/hw_model.pt")
+
+
+def test_native_evidence_matches_loaded_recognizer_candidates(synthetic_checkpoint):
+    from cnn_chinese_hw.recognizer.recognizer import HandwritingRecognizer
+    from cnn_chinese_hw.recognizer.evidence import project_handwriting
+    path, _ = synthetic_checkpoint
+    recognizer = HandwritingRecognizer(checkpoint_path=path, device='cpu')
+    old = recognizer.get_candidates_list(STROKES)
+    raw = recognizer.infer_logits(STROKES)
+    projected = project_handwriting(raw.evidence, raw.arrays)
+    assert [ord(item.text) for item in projected.candidates] == [ordinal for _, ordinal in old]
+    assert [item.probability for item in projected.candidates] == pytest.approx([score for score, _ in old], abs=1e-7)

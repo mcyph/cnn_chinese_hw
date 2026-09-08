@@ -32,7 +32,7 @@ import random
 import argparse
 import numpy as np
 import torch.nn as nn
-from torch.utils.data import DataLoader, WeightedRandomSampler
+from torch.utils.data import DataLoader, WeightedRandomSampler, Subset
 
 from cnn_chinese_hw.recognizer import config
 from cnn_chinese_hw.recognizer.model import build_model
@@ -177,13 +177,13 @@ def save_checkpoint(path, model, ema, store, model_cfg, data_cfg,
     }, path)
 
 
-def calibrate_checkpoint(path, val_loader, device):
+def calibrate_checkpoint(path, val_loader, device, *, partition_metadata=None):
     """Post-hoc temperature scaling (Guo et al., "On Calibration of Modern
     Neural Networks", ICML 2017, arXiv:1706.04599). Fits a single scalar T that
-    divides the logits to make the softmax scores reflect true correctness
-    likelihood -- important because an IME surfaces the candidate *scores*.
-    Accuracy is unchanged; only the confidences are recalibrated. The fitted T
-    is written back into the checkpoint."""
+    divides the logits and fits held-out negative log likelihood. A positive T
+    preserves single-model candidate ordering. This does not establish writer,
+    device or unfinished-prefix calibration; the partition scope is recorded.
+    The fitted T is written back into the checkpoint."""
     import os
     if not os.path.exists(path):
         return
@@ -215,6 +215,14 @@ def calibrate_checkpoint(path, val_loader, device):
     optimizer.step(closure)
     t = float(T.detach().clamp_min(1e-3))
     ckpt['temperature'] = t
+    ckpt['temperature_calibration'] = {
+        'method': 'temperature_nll',
+        'scope': 'heldout_corpus' if partition_metadata else 'unverified_partition',
+        'partition': partition_metadata,
+        'sample_count': int(labels.numel()),
+        'writer_independence': 'unavailable',
+        'device_independence': 'unavailable',
+    }
     torch.save(ckpt, path)
     print(f"Calibration: fitted temperature T={t:.3f}; updated checkpoint.")
 
@@ -227,6 +235,9 @@ def train(data_cfg, model_cfg, train_cfg, cache=True):
 
     ckpt_path = config.checkpoint_path_for(data_cfg.license_group)
     store, train_ds, val_ds = build_datasets(data_cfg, cache=cache)
+    from cnn_chinese_hw.recognizer.calibration import split_calibration_samples
+    from dataclasses import asdict
+    partitions = split_calibration_samples(store.train_samples, store.val_samples, seed=train_cfg.seed)
     model_cfg.num_classes = store.num_classes
 
     if train_cfg.balanced_sampling:
@@ -244,9 +255,16 @@ def train(data_cfg, model_cfg, train_cfg, cache=True):
         worker_init_fn=_worker_init_fn, generator=generator,
     )
     val_loader = DataLoader(
-        val_ds, batch_size=train_cfg.batch_size, shuffle=False,
+        Subset(val_ds, partitions.selection), batch_size=train_cfg.batch_size, shuffle=False,
         num_workers=data_cfg.num_workers, pin_memory=(device == 'cuda'),
     )
+    calibration_loader = DataLoader(Subset(val_ds, partitions.calibration), batch_size=train_cfg.batch_size,
+        shuffle=False, num_workers=data_cfg.num_workers, pin_memory=(device == 'cuda'))
+    test_loader = DataLoader(Subset(val_ds, partitions.test), batch_size=train_cfg.batch_size,
+        shuffle=False, num_workers=data_cfg.num_workers, pin_memory=(device == 'cuda'))
+    print(f"Held-out corpus: selection={len(partitions.selection)} calibration={len(partitions.calibration)} "
+          f"test={len(partitions.test)} training_duplicates_excluded={len(partitions.excluded_training_duplicates)}; "
+          "writer/device independence unavailable")
 
     model = build_model(model_cfg).to(device)
     print(f"Model: {model.num_parameters() / 1e6:.2f}M params, "
@@ -336,8 +354,17 @@ def train(data_cfg, model_cfg, train_cfg, cache=True):
                       f"(best val_top{train_cfg.topk}={best_topk:.4f})")
                 break
 
-    # Recalibrate the best checkpoint's confidence scores on the val set.
-    calibrate_checkpoint(ckpt_path, val_loader, device)
+    # Never fit a temperature on checkpoint-selection observations. The test
+    # partition is evaluated once, after both selection and calibration finish.
+    calibrate_checkpoint(ckpt_path, calibration_loader, device, partition_metadata=asdict(partitions))
+    checkpoint = torch.load(ckpt_path, map_location=device, weights_only=True)
+    model.load_state_dict(checkpoint.get('ema_state') or checkpoint['model_state'])
+    test_top1, test_topk = evaluate(model, test_loader, device, train_cfg.topk)
+    checkpoint['heldout_test'] = {'top1': test_top1, 'topk': test_topk, 'k': train_cfg.topk,
+        'sample_count': len(partitions.test), 'partition_sha256': partitions.partition_sha256,
+        'writer_independence': 'unavailable', 'device_independence': 'unavailable'}
+    torch.save(checkpoint, ckpt_path)
+    print(f"Locked corpus test: top1={test_top1:.4f} top{train_cfg.topk}={test_topk:.4f}")
 
     print(f"Done. Best val_top{train_cfg.topk}={best_topk:.4f}. "
           f"Checkpoint: {ckpt_path}")

@@ -74,6 +74,8 @@ class _LoadedModel:
 
         # Post-hoc calibration temperature (Guo et al., ICML 2017); 1.0 = none.
         self.temperature = float(ckpt.get('temperature', 1.0)) or 1.0
+        from iso_tools.inference.artifacts import local_identity
+        self.inference_identity = local_identity(path, 'torch', model=self.model)
 
     @torch.no_grad()
     def probs(self, x):
@@ -118,6 +120,32 @@ class HandwritingRecognizer:
         self.temperature = self.models[0].temperature
         # Inference is single-instance and may be called from request threads.
         self.lock = threading.Lock()
+
+    @torch.no_grad()
+    def infer_logits(self, strokes_list):
+        """Native per-checkpoint logits, before temperature scaling or ensembling.
+
+        One deterministic render is used. Each checkpoint retains its own
+        vocabulary; combining the distributions is a caller decision.
+        """
+        from iso_tools.inference.arrays import TensorOutput, tensor_spec
+        from iso_tools.inference.types import ClassifierEvidence, ClassifierModel, Vocabulary, identity
+        arrays, specs, models = {}, [], []
+        aug = HWStrokesAugmenter(strokes_list, find_vertices=True)
+        renders = {}
+        with self.lock:
+            for index, loaded in enumerate(self.models):
+                size = loaded.data_cfg.image_size
+                if size not in renders:
+                    renders[size] = self._encode(aug, size, do_augment=False)
+                name = f"logits_{index}"
+                values = loaded.model(renders[size].to(loaded.device))[0].float().cpu().numpy()
+                arrays[name] = values
+                specs.append(tensor_spec(name, values, ("vocabulary",), "native_logits"))
+                models.append(ClassifierModel(loaded.inference_identity,
+                    Vocabulary(tuple(chr(o) for o in loaded.classes)), name, loaded.temperature))
+        return TensorOutput(ClassifierEvidence(tuple(models), tuple(specs),
+            ("deterministic_stroke_raster", "divide_255", "no_tta")), arrays)
 
     @property
     def classes(self):

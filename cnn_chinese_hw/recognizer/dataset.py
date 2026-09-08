@@ -21,9 +21,11 @@ validates on a held-out corpus from the *other* group:
 * ``ccbysa``     -> trains on author + KanjiVG (CC BY-SA 3.0); validates on
   held-out Tomoe.
 
-The validation corpus is used only for early-stopping / calibration and never
-enters the weights, so the permissive model's weights stay free of CC BY-SA. The
-two models are combined at inference time (see ``recognizer.py``).
+The held-out corpus is split into checkpoint-selection, temperature-calibration
+and locked test observations by ``recognizer.calibration``; it never enters the
+weight-fitting loader. Writer/device identities are unavailable in these cached
+records, so this is not a writer- or device-disjoint evaluation. The two models
+are combined at inference time (see ``recognizer.py``).
 """
 
 import os
