@@ -51,9 +51,10 @@ has `torch` (CUDA) installed.
 
 - **Install**: `pip install -e .` (add `pip install -e ".[onnx]"` / `".[gui]"`
   for optional extras).
-- **Smoke-test the pipeline** (seconds):
+- **Smoke-test the pipeline** (seconds; writes `data/hw_model.<group>.smoke.pt`,
+  never the served checkpoint):
   `python -m cnn_chinese_hw.recognizer.train --smoke`
-- **Train** (writes `data/hw_model.pt`):
+- **Train** (writes `data/hw_model.<group>.pt`, default group `permissive`):
   `python -m cnn_chinese_hw.recognizer.train`
 - **Inference**: `HandwritingRecognizer().get_candidates_list(strokes)` returns
   `[(score, ordinal), ...]`. The `HWServer` wrapper returns

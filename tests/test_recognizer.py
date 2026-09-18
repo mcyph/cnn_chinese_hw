@@ -121,6 +121,43 @@ def test_sam_reduces_loss_on_toy_problem():
     assert last < first
 
 
+def test_smoke_run_never_targets_served_checkpoint(monkeypatch):
+    # `train --smoke` used to write its toy model over hw_model.<group>.pt,
+    # the file the recognizer serves. Path selection only: no training runs.
+    from cnn_chinese_hw.recognizer import train as train_mod
+    from cnn_chinese_hw.recognizer.recognizer import discover_checkpoints
+
+    served = config.checkpoint_path_for('permissive')
+    smoke = config.checkpoint_path_for('permissive', smoke=True)
+    assert smoke != served and smoke.endswith('hw_model.permissive.smoke.pt')
+
+    class _Stop(Exception):
+        pass
+
+    requested = []
+    real = config.checkpoint_path_for
+
+    def spy(group, smoke=False):
+        requested.append(real(group, smoke=smoke))
+        return requested[-1]
+
+    def stop(*a, **k):
+        raise _Stop
+
+    monkeypatch.setattr(config, 'checkpoint_path_for', spy)
+    monkeypatch.setattr(train_mod, 'build_datasets', stop)
+    data_cfg, model_cfg, train_cfg = config.default_configs()
+    data_cfg.small_sample_only = True
+    with pytest.raises(_Stop):
+        train_mod.train(data_cfg, model_cfg, train_cfg, cache=False)
+    assert requested == [smoke]
+
+    # ...and the recognizer must not pick the smoke file up as a model.
+    monkeypatch.setattr(config, 'checkpoint_path_for', real)
+    monkeypatch.setattr('os.path.exists', lambda p: p == smoke)
+    assert discover_checkpoints() == []
+
+
 # --------------------------------------------------------------------------
 # Inference path + public API (synthetic checkpoint -> no training needed)
 # --------------------------------------------------------------------------

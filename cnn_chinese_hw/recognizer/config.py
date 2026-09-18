@@ -173,9 +173,15 @@ LICENSE_GROUPS = {
 _DATA = f"{get_package_dir()}/data"
 
 
-def checkpoint_path_for(license_group: str) -> str:
-    """Per-group checkpoint, e.g. ``hw_model.permissive.pt``."""
-    return f"{_DATA}/hw_model.{license_group}.pt"
+def checkpoint_path_for(license_group: str, smoke: bool = False) -> str:
+    """Per-group checkpoint, e.g. ``hw_model.permissive.pt``.
+
+    ``smoke`` selects a separate ``hw_model.<group>.smoke.pt`` so a ``--smoke``
+    toy run can never replace the checkpoint the recognizer serves (it is not
+    discovered by ``recognizer.discover_checkpoints``).
+    """
+    suffix = '.smoke.pt' if smoke else '.pt'
+    return f"{_DATA}/hw_model.{license_group}{suffix}"
 
 
 def stroke_cache_path_for(license_group: str) -> str:

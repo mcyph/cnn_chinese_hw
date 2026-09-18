@@ -2,11 +2,12 @@
 
 Usage
 -----
-Full training run (produces data/hw_model.pt)::
+Full training run (produces data/hw_model.<group>.pt)::
 
     python -m cnn_chinese_hw.recognizer.train
 
-Fast smoke test on a tiny subset (verifies the whole pipeline end to end)::
+Fast smoke test on a tiny subset (verifies the whole pipeline end to end;
+writes data/hw_model.<group>.smoke.pt, never the served checkpoint)::
 
     python -m cnn_chinese_hw.recognizer.train --smoke
 
@@ -233,7 +234,10 @@ def train(data_cfg, model_cfg, train_cfg, cache=True):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     print(f"Device: {device}")
 
-    ckpt_path = config.checkpoint_path_for(data_cfg.license_group)
+    # A small-sample (--smoke) run gets its own file: the toy model must never
+    # replace the checkpoint the recognizer serves.
+    ckpt_path = config.checkpoint_path_for(data_cfg.license_group,
+                                           smoke=data_cfg.small_sample_only)
     store, train_ds, val_ds = build_datasets(data_cfg, cache=cache)
     from cnn_chinese_hw.recognizer.calibration import split_calibration_samples
     from dataclasses import asdict
@@ -294,6 +298,7 @@ def train(data_cfg, model_cfg, train_cfg, cache=True):
 
     best_topk = 0.0
     epochs_no_improve = 0
+    saved = False
 
     for epoch in range(train_cfg.epochs):
         model.train()
@@ -346,6 +351,7 @@ def train(data_cfg, model_cfg, train_cfg, cache=True):
             epochs_no_improve = 0
             save_checkpoint(ckpt_path, model, ema, store,
                             model_cfg, data_cfg, val_top1, val_topk, epoch)
+            saved = True
             print(f"  -> saved checkpoint (val_top{train_cfg.topk}={val_topk:.4f})")
         else:
             epochs_no_improve += 1
@@ -353,6 +359,13 @@ def train(data_cfg, model_cfg, train_cfg, cache=True):
                 print(f"Early stopping at epoch {epoch + 1} "
                       f"(best val_top{train_cfg.topk}={best_topk:.4f})")
                 break
+
+    # Only calibrate a checkpoint written by this run: a file already at
+    # ckpt_path belongs to an earlier run with its own label space.
+    if not saved:
+        print(f"No checkpoint saved (val_top{train_cfg.topk} never rose above 0); "
+              f"leaving {ckpt_path} untouched.")
+        return best_topk
 
     # Never fit a temperature on checkpoint-selection observations. The test
     # partition is evaluated once, after both selection and calibration finish.

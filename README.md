@@ -74,7 +74,8 @@ Training renders the stroke corpora into multi-channel directMaps on the fly
 and trains the network from scratch.
 
 ```console
-# Quick end-to-end pipeline check on a tiny subset (a few seconds):
+# Quick end-to-end pipeline check on a tiny subset (a few seconds).
+# Writes hw_model.<group>.smoke.pt, never the checkpoint the recognizer loads:
 python -m cnn_chinese_hw.recognizer.train --smoke
 
 # Train the two license-separated models (each writes its own checkpoint):
