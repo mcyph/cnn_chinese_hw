@@ -46,8 +46,8 @@ class DataConfig:
     # Include the Make Me a Hanzi (graphics.txt) stroke-median corpus as an
     # extra training source. Arphic Public License (commercial-OK, non-GPL); it
     # adds ~9.5k characters of synthetic pen trajectories, greatly expanding
-    # character coverage beyond the Tomoe corpus. Silently skipped if the data
-    # file is absent. See cnn_chinese_hw/parse_data/iter_makemeahanzi_data.py.
+    # character coverage beyond the Tomoe corpus. Skipped (with a printed
+    # notice) if the data file is absent. See cnn_chinese_hw/parse_data/iter_makemeahanzi_data.py.
     use_makemeahanzi: bool = True
     # Which license group to train. Each group trains on a set of corpora that
     # are license-compatible *with each other* and validates on a held-out

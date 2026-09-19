@@ -40,6 +40,7 @@ from cnn_chinese_hw.recognizer import config
 from cnn_chinese_hw.parse_data.StrokeData import StrokeData
 from cnn_chinese_hw.parse_data.iter_kanjivg_data import iter_kanjivg_data
 from cnn_chinese_hw.parse_data.iter_makemeahanzi_data import (
+    DEFAULT_PATH as MAKEMEAHANZI_PATH,
     iter_makemeahanzi_data,
 )
 from cnn_chinese_hw.stroke_tools.HWDataAugmenter import HWStrokesAugmenter
@@ -91,9 +92,9 @@ class StrokeStore:
         if data_cfg.small_sample_only:
             cache_path = cache_path.replace('.pkl', '_sample.pkl')
 
-        if cache and os.path.exists(cache_path):
-            self._load(cache_path)
-        else:
+        # _load returns False for a stale cache (fingerprint mismatch).
+        if not (cache and os.path.exists(cache_path)
+                and self._load(cache_path)):
             self._build()
             if cache:
                 self._save(cache_path)
@@ -111,10 +112,34 @@ class StrokeStore:
         return [counts.get(i, 0) for i in range(self.num_classes)]
 
     # -- (de)serialisation ----------------------------------------------
+    def _fingerprint(self):
+        """Everything the cached samples depend on: the config fields that
+        select/truncate corpora plus (size, mtime) of every source file. A
+        cache whose stored fingerprint differs is stale and gets rebuilt."""
+        cfg = self.cfg
+        paths = list(config.TOMOE_FILES.values()) + [
+            config.SUPPLEMENTAL_PATH, config.KANJIVG_PATH, MAKEMEAHANZI_PATH,
+        ]
+        files = {}
+        for path in paths:
+            try:
+                st = os.stat(path)
+                files[os.path.basename(path)] = (st.st_size, st.st_mtime_ns)
+            except OSError:
+                files[os.path.basename(path)] = None
+        return {
+            'license_group': cfg.license_group,
+            'use_makemeahanzi': cfg.use_makemeahanzi,
+            'small_sample_size': (cfg.small_sample_size
+                                  if cfg.small_sample_only else None),
+            'files': files,
+        }
+
     def _save(self, path):
         print(f"Saving stroke cache -> {path}")
         with open(path, 'wb') as f:
             pickle.dump({
+                'fingerprint': self._fingerprint(),
                 'classes': self.classes,
                 'train_samples': self.train_samples,
                 'val_samples': self.val_samples,
@@ -124,10 +149,18 @@ class StrokeStore:
         print(f"Loading stroke cache <- {path}")
         with open(path, 'rb') as f:
             d = pickle.load(f)
+        fingerprint = self._fingerprint()
+        if d.get('fingerprint') != fingerprint:
+            print(f"  stroke cache is STALE (config or source data changed; "
+                  f"cached={d.get('fingerprint')} now={fingerprint}) "
+                  f"-> rebuilding")
+            return False
+        print(f"  stroke cache fingerprint: {fingerprint}")
         self.classes = d['classes']
         self.train_samples = d['train_samples']
         self.val_samples = d['val_samples']
         self._ord_to_label = {o: i for i, o in enumerate(self.classes)}
+        return True
 
     # -- building --------------------------------------------------------
     def _label_for(self, ord_, allow_new):
@@ -179,14 +212,16 @@ class StrokeStore:
 
     def _emit_makemeahanzi(self):
         # Arphic Public License; one synthetic stroke-median exemplar per char.
+        # iter_makemeahanzi_data is a generator: its missing-file check only
+        # runs on the first next(), so the loop itself must sit inside the try.
         try:
-            it = iter_makemeahanzi_data()
+            for ord_, strokes_list in iter_makemeahanzi_data():
+                # Medians are sparse centre-lines already -> normalise, no
+                # re-vertex.
+                yield ord_, [points_normalized(strokes_list)], False
         except FileNotFoundError as e:
-            print(f"  [makemeahanzi] skipped: {e}")
-            return
-        for ord_, strokes_list in it:
-            # Medians are sparse centre-lines already -> normalise, no re-vertex.
-            yield ord_, [points_normalized(strokes_list)], False
+            print(f"  [makemeahanzi] SKIPPED -- ~9.5k characters of coverage "
+                  f"are missing from this run: {e}")
 
     def _emit_kanjivg(self):
         # CC BY-SA. Bezier control points -> find_vertices=True at render time.

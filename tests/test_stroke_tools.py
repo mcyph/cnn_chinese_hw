@@ -28,3 +28,18 @@ def test_brensenham_line_preserves_requested_direction_and_endpoints():
 def test_get_vertex_collapses_straight_lines_but_preserves_corners():
     assert get_vertex([(0, 0), (250, 0), (500, 0), (1000, 0)]) == [(0, 0), (1000, 0)]
     assert get_vertex([(0, 0), (500, 0), (500, 500)]) == [(0, 0), (500, 0), (500, 500)]
+
+
+def test_get_vertex_keeps_the_corners_of_a_closed_stroke():
+    # first == last gives a zero-length chord: every distance was 0 and the
+    # whole loop collapsed to [(0, 0)].
+    square = [(0, 0), (1000, 0), (1000, 1000), (0, 1000), (0, 0)]
+    assert get_vertex(square) == square
+
+
+def test_get_vertex_applies_error_scale_below_the_top_level():
+    # (250, 50) deviates 20000 (squared) from the (0,0)-(500,500) chord: above
+    # the default threshold (225) but below the scaled one (22500).
+    nodes = [(0, 0), (250, 50), (500, 500), (1000, 0)]
+    assert get_vertex(nodes) == nodes
+    assert get_vertex(nodes, error_scale=100) == [(0, 0), (500, 500), (1000, 0)]

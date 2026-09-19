@@ -158,6 +158,59 @@ def test_smoke_run_never_targets_served_checkpoint(monkeypatch):
     assert discover_checkpoints() == []
 
 
+def test_missing_makemeahanzi_file_is_skipped_not_fatal(monkeypatch, tmp_path,
+                                                        capsys):
+    # iter_makemeahanzi_data is a generator, so its FileNotFoundError fires on
+    # the first next(), not at the call: a try around the call alone let it
+    # escape and killed training on a fresh clone (graphics.txt is gitignored).
+    from cnn_chinese_hw.recognizer import dataset as dataset_mod
+    from cnn_chinese_hw.parse_data.iter_makemeahanzi_data import (
+        iter_makemeahanzi_data,
+    )
+
+    missing = str(tmp_path / 'graphics.txt')
+    monkeypatch.setattr(dataset_mod, 'iter_makemeahanzi_data',
+                        lambda: iter_makemeahanzi_data(missing))
+    assert list(dataset_mod.StrokeStore._emit_makemeahanzi(None)) == []
+    assert 'SKIPPED' in capsys.readouterr().out
+
+
+def test_stroke_cache_is_rebuilt_when_config_or_source_data_changes(
+        monkeypatch, tmp_path):
+    # The cache used to be keyed on the license group alone, so new author
+    # strokes / a downloaded graphics.txt / use_makemeahanzi=False silently
+    # trained on the previous class set.
+    from cnn_chinese_hw.recognizer import dataset as dataset_mod
+
+    source = tmp_path / 'supplemental_data.json'
+    source.write_text('{}')
+    monkeypatch.setattr(config, 'SUPPLEMENTAL_PATH', str(source))
+    monkeypatch.setattr(config, 'stroke_cache_path_for',
+                        lambda group: str(tmp_path / f'cache.{group}.pkl'))
+    builds = []
+
+    def fake_build(self):
+        builds.append(1)
+        self.classes = [ord('一')]
+        self.train_samples = [(0, STROKES, False)]
+        self.val_samples = []
+
+    monkeypatch.setattr(dataset_mod.StrokeStore, '_build', fake_build)
+
+    dataset_mod.StrokeStore(config.DataConfig())
+    store = dataset_mod.StrokeStore(config.DataConfig())
+    assert len(builds) == 1 and store.classes == [ord('一')]  # cache hit
+
+    dataset_mod.StrokeStore(config.DataConfig(use_makemeahanzi=False))
+    assert len(builds) == 2                                   # config changed
+    dataset_mod.StrokeStore(config.DataConfig(use_makemeahanzi=False))
+    assert len(builds) == 2
+
+    source.write_text('{"19968": []}')
+    dataset_mod.StrokeStore(config.DataConfig(use_makemeahanzi=False))
+    assert len(builds) == 3                                   # source changed
+
+
 # --------------------------------------------------------------------------
 # Inference path + public API (synthetic checkpoint -> no training needed)
 # --------------------------------------------------------------------------

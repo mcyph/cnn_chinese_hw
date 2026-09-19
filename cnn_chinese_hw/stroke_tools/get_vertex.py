@@ -41,6 +41,18 @@ def get_distance(nodes, first_node_idx, last_node_idx):
     b = last[1] - first[1]
     c = last[1] * first[0] - last[0] * first[1]
 
+    if a == 0 and b == 0:
+        # Closed stroke (first == last): there is no chord to measure against
+        # and every |aw - bv + c| is 0, which used to collapse the whole loop
+        # to one point. Split at the node farthest from the shared endpoint.
+        for node_idx in range(first_node_idx, last_node_idx+1):
+            node = nodes[node_idx]
+            dist = (node[0] - first[0]) ** 2 + (node[1] - first[1]) ** 2
+            if dist > max:
+                max = dist
+                most_node = node_idx
+        return max, most_node
+
     for node_idx in range(first_node_idx, last_node_idx+1):  # OFF BY ONE ERROR?
         node = nodes[node_idx]
         dist = abs((a * node[1]) - (b * node[0]) + c)
@@ -65,8 +77,8 @@ def _get_vertex(nodes, first_node_idx, last_node_idx, error_scale=1.0):
 
     dist, most_node_idx = get_distance(nodes, first_node_idx, last_node_idx)
     if dist > ERROR:
-        rv = _get_vertex(nodes, first_node_idx, most_node_idx) + \
-             _get_vertex(nodes, most_node_idx, last_node_idx)
+        rv = _get_vertex(nodes, first_node_idx, most_node_idx, error_scale) + \
+             _get_vertex(nodes, most_node_idx, last_node_idx, error_scale)
     else:
         rv.append(nodes[last_node_idx])
     return rv
