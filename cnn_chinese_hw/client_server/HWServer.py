@@ -1,5 +1,6 @@
 from cnn_chinese_hw.client_server.rem_dupes import rem_dupes
 from cnn_chinese_hw.recognizer.recognizer import HandwritingRecognizer
+import threading
 
 
 class HWServer:
@@ -13,11 +14,14 @@ class HWServer:
     def __init__(self, device='cpu'):
         self._device = device
         self._recognizer = None
+        self._recognizer_lock = threading.Lock()
 
     @property
     def recognizer(self):
         if self._recognizer is None:
-            self._recognizer = HandwritingRecognizer(device=self._device)
+            with self._recognizer_lock:
+                if self._recognizer is None:
+                    self._recognizer = HandwritingRecognizer(device=self._device)
         return self._recognizer
 
     def get_chinese_written_candidates(self, strokes_list, id):

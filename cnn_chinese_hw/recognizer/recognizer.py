@@ -59,6 +59,8 @@ class _LoadedModel:
     def __init__(self, path, device, use_ema=True):
         self.path = path
         self.device = torch.device(device)
+        from iso_tools.inference.artifacts import LoadIdentity
+        identity = LoadIdentity(path, 'torch')
         # The checkpoint contains only tensors + plain containers, so it loads
         # under the safe (weights_only) unpickler.
         ckpt = torch.load(path, map_location=self.device, weights_only=True)
@@ -74,8 +76,7 @@ class _LoadedModel:
 
         # Post-hoc calibration temperature (Guo et al., ICML 2017); 1.0 = none.
         self.temperature = float(ckpt.get('temperature', 1.0)) or 1.0
-        from iso_tools.inference.artifacts import local_identity
-        self.inference_identity = local_identity(path, 'torch', model=self.model)
+        self.inference_identity = identity.complete(self.model)
 
     @torch.no_grad()
     def probs(self, x):

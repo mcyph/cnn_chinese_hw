@@ -12,10 +12,10 @@ citations.
 | Capability | Canonical entrypoint |
 |---|---|
 | Calibrated ensemble candidates | `recognizer.recognizer.HandwritingRecognizer.get_candidates_list` |
-| Native per-checkpoint logits, vocabularies and calibration metadata | `HandwritingRecognizer.infer_logits`; shared Pydantic evidence and load-time fingerprints from `iso_tools.inference` (available on the monorepo `PYTHONPATH`) |
+| Native per-checkpoint logits, vocabularies and calibration metadata | `HandwritingRecognizer.infer_logits`; shared Pydantic evidence and before/after construction fingerprints from `iso_tools.inference.artifacts.LoadIdentity` (available on the monorepo `PYTHONPATH`); resident identity never follows a subsequently replaced checkpoint |
 | Import-light native probability ensemble and compact diagnostic evidence | `recognizer.evidence.project_handwriting`; checkpoint temperatures preserve existing ensemble semantics, missing classes are explicit and probabilities are not writer-calibrated correctness |
 | Separate checkpoint selection, temperature fitting and corpus testing | `recognizer.calibration.split_calibration_samples`, using `iso_tools.stt.evaluation.partitions`; protects held-out character variants/rounded geometry and excludes exact training duplicates; writer/device identities remain unavailable |
-| Lazy service wrapper | `client_server.HWServer` |
+| Lazy service wrapper | `client_server.HWServer`; synchronized per-instance first load, retryable after failure; backend adapters must reuse one wrapper |
 
 ## Project Structure
 
