@@ -157,6 +157,17 @@ probabilities). This keeps the share-alike KanjiVG data out of the permissive
 model's weights; see [`THIRD_PARTY_DATA.md`](THIRD_PARTY_DATA.md) and the License
 section.
 
+## Character stroke display data
+
+The dictionary's stroke animation can use the optional Make Me a Hanzi
+`graphics.txt` for filled outlines. Provision it on the backend host with
+`python -m cnn_chinese_hw.parse_data.iter_makemeahanzi_data --download` (or
+place the licensed file at `cnn_chinese_hw/data/makemeahanzi/graphics.txt`).
+The file is not checked into Git. Without it, the animation still works using
+the selected locale's Tomoe trajectories. Outline use is screened against
+those trajectories, but this comparison does not certify a regional standard.
+See `THIRD_PARTY_DATA.md` and the adjacent licence and copying notices.
+
 ## Project layout
 
 ```
