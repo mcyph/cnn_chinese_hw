@@ -165,8 +165,24 @@ The dictionary's stroke animation picks one source per locale
 | Locale | Order of preference |
 |---|---|
 | `zh` | Make Me a Hanzi → Tomoe |
-| `zh-TW` | AnimCJK Taiwan → Make Me a Hanzi (if it fits Tomoe zh-TW) → Tomoe |
-| `ja` | AnimCJK Japanese (if it agrees with KanjiVG) → KanjiVG → Make Me a Hanzi (if it fits Tomoe ja) → Tomoe |
+| `zh-TW` | AnimCJK Taiwan → Make Me a Hanzi (if it fits Tomoe zh-TW) → stroke model → Tomoe |
+| `ja` | AnimCJK Japanese (if it agrees with KanjiVG) → KanjiVG → Make Me a Hanzi (if it fits Tomoe ja) → stroke model → Tomoe |
+
+Wherever only Tomoe remains (mostly rare Traditional characters), the **stroke
+model** (`cnn_chinese_hw/stroke_model/`) draws a kai outline from Tomoe's
+strokes, keeping Tomoe's stroke order and count; the UI labels these drawings
+as machine-generated. It is a small transformer over the glyph's strokes that
+predicts each stroke's centreline plus left/right widths
+(`stroke_model.representation`). Rebuild it (about 2 + 12 minutes on one GPU):
+
+```bash
+python -m cnn_chinese_hw.parse_data.animcjk_data --download     # targets (with Make Me a Hanzi)
+python -m cnn_chinese_hw.stroke_model.dataset                   # Tomoe <-> outline pairs
+python -m cnn_chinese_hw.stroke_model.train                     # data/stroke_model/stroke_outline.pt
+```
+
+Neither the pairs nor the checkpoint is checked into Git; without the checkpoint
+the display serves Tomoe's own strokes.
 
 The outline corpora are optional and not checked into Git. Provision them on the
 backend host with:

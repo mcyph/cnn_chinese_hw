@@ -30,6 +30,7 @@ models your licensing allows; the recognizer ensembles whatever is present.
 | Make Me a Hanzi (`graphics.txt`) | Arphic Public License | ✅ |
 | KanjiVG | CC BY-SA 3.0 | ✅ (**share-alike**) |
 | AnimCJK (`graphicsJa.txt`, `graphicsZhHant.txt`; display only) | Arphic Public License | ✅ |
+| Stroke model (`data/stroke_model/stroke_outline.pt`) and its generated outlines | Tomoe LGPL 2.1 + Arphic Public License | ✅ |
 
 > Deliberately **excluded** for licensing reasons: CASIA-OLHWDB / CASIA-HWDB and
 > the ETL Character Database (research / non-commercial only), Tegaki / Zinnia
@@ -90,6 +91,14 @@ glyphs, each in that region's letterforms, stroke order and stroke count. Used
 - Upstream copying notice shipped at: `cnn_chinese_hw/data/animcjk/COPYING.txt`
 - The frontend credits AnimCJK and links both files (`public/licenses/animcjk/`)
   beside every AnimCJK drawing.
+
+## Stroke model — generated outlines
+
+`cnn_chinese_hw.stroke_model` is trained on Tomoe trajectories (LGPL 2.1) paired
+with Make Me a Hanzi and AnimCJK outlines (Arphic Public License); KanjiVG is
+**not** used, so no share-alike applies. Treat the checkpoint and every outline
+it generates as derived from both: the frontend labels generated drawings as
+machine-generated and credits Tomoe (LGPL 2.1) and Arphic (APL) beside them.
 
 ## KanjiVG
 
