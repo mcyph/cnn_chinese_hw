@@ -141,3 +141,11 @@ cnn_chinese_hw/data/hw_model.*.smoke.pt
 # `python -m cnn_chinese_hw.parse_data.iter_makemeahanzi_data --download`.
 # The license/attribution files in that directory ARE tracked (see !... below).
 cnn_chinese_hw/data/makemeahanzi/graphics.txt
+# AnimCJK regional outlines (~28 MB, Arphic Public License), pinned and
+# checksum-verified. Fetch with `python -m cnn_chinese_hw.parse_data.animcjk_data --download`.
+# The licence/copying files in that directory ARE tracked.
+cnn_chinese_hw/data/animcjk/graphics*.txt
+cnn_chinese_hw/data/animcjk/*.partial
+# Stroke-model training pairs (rebuilt with `python -m cnn_chinese_hw.stroke_model.dataset`).
+cnn_chinese_hw/data/stroke_model/pairs.npz
+cnn_chinese_hw/data/stroke_model/stroke_outline*.pt

@@ -29,6 +29,7 @@ models your licensing allows; the recognizer ensembles whatever is present.
 | Tomoe | LGPL 2.1 | ✅ (copyleft) |
 | Make Me a Hanzi (`graphics.txt`) | Arphic Public License | ✅ |
 | KanjiVG | CC BY-SA 3.0 | ✅ (**share-alike**) |
+| AnimCJK (`graphicsJa.txt`, `graphicsZhHant.txt`; display only) | Arphic Public License | ✅ |
 
 > Deliberately **excluded** for licensing reasons: CASIA-OLHWDB / CASIA-HWDB and
 > the ETL Character Database (research / non-commercial only), Tegaki / Zinnia
@@ -69,6 +70,26 @@ Attribution (as suggested by the project):
 
 > Make Me a Hanzi data, © Arphic Technology Co., Ltd., used under the Arphic
 > Public License. Derived from the AR PL KaitiM GB and AR PL UKai fonts.
+
+## AnimCJK — `graphicsJa.txt`, `graphicsZhHant.txt`
+
+Regional stroke outlines and medians: Japanese kanji and Taiwan Traditional
+glyphs, each in that region's letterforms, stroke order and stroke count. Used
+**only for stroke-order display** (`parse_data.animcjk_data`,
+`parse_data.display_strokes`), never for training. The kana file is not used.
+
+- Source: <https://github.com/parsimonhi/animCJK>, pinned to commit
+  `1c8c8ef45aa9dfe1e1129cb5462ddf59a50a65ce` with sha256 checks
+  (`python -m cnn_chinese_hw.parse_data.animcjk_data --download`). The data
+  files are not checked into Git.
+- Copyright 2016-2026 FM&SH. Derived from Make Me a Hanzi and the Arphic PL
+  KaitiM GB / Big5 fonts.
+- License: **Arphic Public License**, the same terms as Make Me a Hanzi.
+- License text shipped at:
+  `cnn_chinese_hw/data/animcjk/LICENSE-Arphic-Public-License.txt`
+- Upstream copying notice shipped at: `cnn_chinese_hw/data/animcjk/COPYING.txt`
+- The frontend credits AnimCJK and links both files (`public/licenses/animcjk/`)
+  beside every AnimCJK drawing.
 
 ## KanjiVG
 
