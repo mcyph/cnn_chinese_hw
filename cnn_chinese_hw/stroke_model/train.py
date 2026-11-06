@@ -1,6 +1,10 @@
 """Train the stroke outline model and report held-out glyph IoU.
 
-    python -m cnn_chinese_hw.stroke_model.train [--epochs 200] [--device cuda]
+    python -m cnn_chinese_hw.stroke_model.train [--epochs 200] [--device cuda] [--synthetic]
+
+``--synthetic`` adds, each epoch, freshly drawn Tomoe-style inputs made from
+train-split outline glyphs (``stroke_model.synthetic``), ``--synthetic-ratio``
+times as many as the real training pairs. Evaluation stays on real Tomoe.
 
 The baseline is a uniform-width stroke along Tomoe's own points whose glyph box
 is fitted to the true outline's box: today's renderer, generously given the
@@ -18,6 +22,7 @@ import torch
 
 from . import dataset as D
 from . import representation as R
+from . import synthetic as S
 from .infer import CHECKPOINT
 from .model import StrokeOutlineModel
 BASELINE_HALF_WIDTH = 30 / 1024
@@ -96,6 +101,8 @@ def main():
     ap.add_argument('--device', default='cuda' if torch.cuda.is_available() else 'cpu')
     ap.add_argument('--seed', type=int, default=0)
     ap.add_argument('--out', default=CHECKPOINT)
+    ap.add_argument('--synthetic', action='store_true')
+    ap.add_argument('--synthetic-ratio', type=float, default=1.0)
     args = ap.parse_args()
     random.seed(args.seed); np.random.seed(args.seed); torch.manual_seed(args.seed)
 
@@ -103,24 +110,30 @@ def main():
     train = [g for g in glyphs if g['split'] == 'train']
     val = [g for g in glyphs if g['split'] == 'val']
     test = [g for g in glyphs if g['split'] == 'test']
-    print(f'pairs: train {len(train)}, val {len(val)}, test {len(test)}', flush=True)
+    synth = S.load() if args.synthetic else []
+    rng = np.random.default_rng(args.seed)
+    print(f'pairs: train {len(train)}, val {len(val)}, test {len(test)}; synthetic glyphs {len(synth)}', flush=True)
 
     model = StrokeOutlineModel().to(args.device)
     opt = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=0.01)
-    steps = args.epochs * math.ceil(len(train) / args.batch)
+    per_epoch = len(train) + (int(len(train) * args.synthetic_ratio) if synth else 0)
+    steps = args.epochs * math.ceil(per_epoch / args.batch)
     warm = min(1000, steps // 10)
     sched = torch.optim.lr_scheduler.LambdaLR(
         opt, lambda s: min(1, (s + 1) / warm) * 0.5 * (1 + math.cos(math.pi * min(1, s / steps))))
     best, history, t0 = None, [], time.time()
     for epoch in range(1, args.epochs + 1):
-        random.shuffle(train)
+        epoch_set = list(train)
+        if synth:
+            picks = rng.choice(len(synth), min(len(synth), per_epoch - len(train)), replace=False)
+            epoch_set += [S.sample(synth[i], rng) for i in picks]
         # Similar stroke counts per batch keep padding low.
-        order = sorted(range(len(train)), key=lambda i: len(train[i]['inputs']) + random.random() * 4)
+        order = sorted(range(len(epoch_set)), key=lambda i: len(epoch_set[i]['inputs']) + random.random() * 4)
         batches = [order[i:i + args.batch] for i in range(0, len(order), args.batch)]
         random.shuffle(batches)
         total = 0.0
         for idx in batches:
-            inputs, mask, centre, left, right = batch([train[i] for i in idx], args.device, jitter=0.004)
+            inputs, mask, centre, left, right = batch([epoch_set[i] for i in idx], args.device, jitter=0.004)
             loss = loss_fn(model(inputs, mask), mask, centre, left, right)[0]
             opt.zero_grad(set_to_none=True)
             loss.backward()
@@ -129,7 +142,7 @@ def main():
             total += loss.item() * len(idx)
         if epoch % 20 == 0 or epoch == args.epochs:
             metrics = evaluate(model, val, args.device)
-            history.append({'epoch': epoch, 'train_loss_em': total / len(train), **metrics})
+            history.append({'epoch': epoch, 'train_loss_em': total / len(epoch_set), **metrics})
             print(json.dumps(history[-1]), f'{time.time() - t0:.0f}s', flush=True)
             if best is None or metrics['iou'] > best[0]:
                 best = (metrics['iou'], {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}, epoch)

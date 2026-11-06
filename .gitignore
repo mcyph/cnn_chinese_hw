@@ -149,3 +149,4 @@ cnn_chinese_hw/data/animcjk/*.partial
 # Stroke-model training pairs (rebuilt with `python -m cnn_chinese_hw.stroke_model.dataset`).
 cnn_chinese_hw/data/stroke_model/pairs.npz
 cnn_chinese_hw/data/stroke_model/stroke_outline*.pt
+cnn_chinese_hw/data/stroke_model/synthetic.npz
