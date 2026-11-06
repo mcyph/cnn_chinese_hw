@@ -77,6 +77,12 @@ Kanji stroke-order vector data. It is the sole licensed training corpus of the
 only** when training the `permissive` model — so it never enters the permissive
 weights.
 
+It is also the Japanese stroke-order **display** source
+(`parse_data.kanjivg_strokes`, served through `/api/get_hanzi_strokes` for `ja`
+locales). The frontend shows the attribution and licence link beside every
+KanjiVG drawing. Strokes drawn from it are adapted material, shared under
+CC BY-SA 3.0.
+
 - Source: <https://kanjivg.tagaini.net/>
 - License: Creative Commons Attribution-Share Alike 3.0
   (<https://creativecommons.org/licenses/by-sa/3.0/>)
